@@ -1,7 +1,6 @@
 #pragma once
 
-#include <stdint.h>
-#include <stddef.h>
+#include "common.hpp"
 
 #ifdef __cplusplus
 extern "C" {
@@ -10,13 +9,6 @@ extern "C" {
 // Bitpacks a 2x1 strip of tiles into a single byte
 #define LEFT_TILE(x) (((x) >> 4) & 0xf)
 #define RIGHT_TILE(x) ((x) & 0xf)
-
-enum class Nametable : uint8_t {
-    A = 0x00,
-    B = 0x04,
-    C = 0x08,
-    D = 0x0c,
-};
 
 struct Metatile_2_2 {
     uint8_t top;
@@ -44,9 +36,9 @@ struct Metatile_4_4 {
  * @param y   - Y coord between 0 - 29
  * @param tile - Pointer to the metatile to draw
  */
-void draw_metatile_2_2(Nametable nmt, uint8_t x, uint8_t y, const Metatile_2_2* tile);
-void draw_metatile_2_3(Nametable nmt, uint8_t x, uint8_t y, const Metatile_2_3* tile);
-void draw_metatile_4_4(Nametable nmt, uint8_t x, uint8_t y, const Metatile_4_4* tile);
+void draw_metatile_2_2(Nametable nmt, uint8_t x, uint8_t y, Metatile idx);
+void draw_metatile_2_3(Nametable nmt, uint8_t x, uint8_t y, Letter idx);
+void draw_metatile_4_4(Nametable nmt, uint8_t x, uint8_t y, uint8_t idx);
 
 consteval uint8_t get_tile_for_bits(uint8_t bits) {
     const uint8_t bits_to_tile[] = {

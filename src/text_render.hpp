@@ -1,8 +1,6 @@
 #pragma once
 
-#include "metatile.hpp"
-#include <stdint.h>
-#include <stddef.h>
+#include "common.hpp"
 
 #ifdef __cplusplus
 extern "C" {
@@ -19,53 +17,6 @@ constexpr bool SKIP_DRAWING_SPACE = true;
  *        If SKIP_DRAWING_SPACE = false, the full 2x3 space glyph is rendered, but the next character position starts in the middle of the space
  */
 constexpr bool HALF_SIZE_SPACE = true;
-
-/**
- * @brief List of possible letters in our custom font. If you would like to update this list,
- *        then add a new character, and update the `font.inc` to add your character at the same location
- *        in the list.
- */
-enum Letter {
-    _0,
-    _1,
-    _2,
-    _3,
-    _4,
-    _5,
-    _6,
-    _7,
-    _8,
-    _9,
-    A,
-    B,
-    C,
-    D,
-    E,
-    F,
-    G,
-    H,
-    I,
-    J,
-    K,
-    L,
-    M,
-    N,
-    O,
-    P,
-    Q,
-    R,
-    S,
-    T,
-    U,
-    V,
-    W,
-    X,
-    Y,
-    Z,
-    SPACE,
-    COUNT,
-};
-
 
 /**
  * @brief Draw a single letter to the VRAM_BUFFER. This can be used with rendering ON since it buffers the writes.

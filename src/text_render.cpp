@@ -15,11 +15,6 @@
     Font definitions
 */
 
-__attribute__((section(".prg_rom_fixed")))
-static const constexpr soa::Array<Metatile_2_3, Letter::COUNT> all_letters = {
-    #include "font.inc"
-};
-
 [[maybe_unused]]
 static const Letter* test_string = "01001"_l;
 
@@ -33,8 +28,7 @@ extern "C" void render_string(Nametable nmt, uint8_t x, uint8_t y, const Letter 
     for (uint8_t i = 1; i < len; i++) {
         auto letter = str[i];
         if (!SKIP_DRAWING_SPACE || letter != Letter::SPACE) {
-            const auto t = all_letters[letter].get();
-            draw_metatile_2_3(nmt, x, y, &t);
+            draw_metatile_2_3(nmt, x, y, letter);
         }
         if (HALF_SIZE_SPACE && letter == Letter::SPACE)
             x += 1;

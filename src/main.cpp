@@ -11,19 +11,20 @@
 // Include our own player update function for the movable sprite.
 #include "player.hpp"
 #include "text_render.hpp"
+#include "levels.hpp"
 
 // Include a basic nametable thats RLE compressed for the demo
-const unsigned char nametable[] = {
-    #embed "../default-nametable-rle.nam"
-};
+// const unsigned char nametable[] = {
+//     #embed "../default-nametable-rle.nam"
+// };
 
 // On the Game Genie, only color 0 and 3 of each palette will be used
-static const uint8_t default_palette[] = {
+static const uint8_t default_palette[32] = {
 // BG Palette
-    0x0f, 0x0f, 0x0f, 0x30,
-    0x0f, 0x0f, 0x0f, 0x22,
-    0x0f, 0x0f, 0x0f, 0x15,
-    0x0f, 0x0f, 0x0f, 0x0f,
+    0x0f, 0x0f, 0x0f, 0x37,
+    0x0f, 0x0f, 0x0f, 0x11,
+    0x0f, 0x0f, 0x0f, 0x16,
+    0x0f, 0x0f, 0x0f, 0x29,
 // Sprite Palette
     0x0f, 0x0f, 0x0f, 0x30,
     0x0f, 0x0f, 0x0f, 0x0f,
@@ -104,24 +105,27 @@ int main() {
     // Upload a basic palette we can use later.
     pal_all(default_palette);
 
-    // Set the scroll position on the screen to 0, 0
-    scroll(0, 0);
+    pal_bright(4);
     
     // And then clear out the other nametable as well.
-    vram_adr(NAMETABLE_B);
+    // vram_adr(NAMETABLE_B);
     // Write a RLE compressed nametable to the screen. You can generate NESLIB compatible RLE
     // compressed nametables with a tool like NEXXT
-    vram_unrle(nametable);
+    // vram_unrle(nametable);
 
     // Example string rendering using the custom string conversion.
     // The `_l` is a user defined literal, which converts from ASCII to our custom character map at compile time
     // ie: in the generated code "THE QUICK" will be compiled as {Letter::T, Letter::H, ... Letter::NUL}
-    render_string(Nametable::A, 1, 1, "THE QUICK"_l);
-    render_string(Nametable::A, 1, 4, "BROWN FOX"_l);
-    render_string(Nametable::A, 1, 7, "JUMPS OVER"_l);
-    render_string(Nametable::A, 1, 10, "THE LAZY DOG"_l);
-    render_string(Nametable::A, 1, 14, "PUSH SELECT"_l);
-    render_string(Nametable::A, 1, 17, "TO SWITCH VIEW"_l);
+    // render_string(Nametable::A, 1, 1, "THE QUICK"_l);
+    // render_string(Nametable::A, 1, 4, "BROWN FOX"_l);
+    // render_string(Nametable::A, 1, 7, "JUMPS OVER"_l);
+    // render_string(Nametable::A, 1, 10, "THE LAZY DOG"_l);
+    // render_string(Nametable::A, 1, 14, "PUSH SELECT"_l);
+    // render_string(Nametable::A, 1, 17, "TO SWITCH VIEW"_l);
+    draw_level(0);
+
+    // Set the scroll position on the screen to 0, 0
+    scroll(0, 0);
     
     // Turn on the screen, showing both the background and sprites
     ppu_on_all();
@@ -136,9 +140,9 @@ int main() {
         // Run the main code for processing our backgrounds.
         // NOTE: llvm-mos is very aggressive at inlining, so don't stress the small things
         // like function call overhead too much.
-        update_view();
+        // update_view();
 
-        update_player_position();
+        // update_player_position();
         
         // All done! Wait for the next frame before looping again
         ppu_wait_frame();
