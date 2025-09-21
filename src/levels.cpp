@@ -1,4 +1,6 @@
 
+#include <cstddef>
+#include <nesdoug.h>
 #include <neslib.h>
 #include <stdint.h>
 #include <peekpoke.h>
@@ -8,22 +10,9 @@
 #include "graphics.hpp"
 #include "metatile.hpp"
 #include "levels.hpp"
-
+#include "rle.hpp"
 
 extern volatile __zeropage uint8_t VRAM_INDEX;
-
-const uint8_t* all_levels[] = {
-    LEVEL_0,
-    LEVEL_1,
-};
-
-const uint8_t LEVEL_0[] = {
-    C_MANY(LevelObjType::SOLID_WALL, C_VERTICAL, 4, 3, 0),
-    C_MANY(LevelObjType::SOLID_WALL, C_VERTICAL, 4, 3, 5),
-    // C_ONE(LevelObjType::PICKUP, 1, 6),
-    // C_PLAYER(Facing::Left, 5, 3),
-    C_END(),
-};
 
 static const uint8_t* __zp current_level;
 static __zp uint8_t level_offset;
@@ -32,10 +21,30 @@ static __zp uint8_t cmd;
 constexpr uint8_t LEVEL_X_POS = 10;
 constexpr uint8_t LEVEL_Y_POS = 2;
 
-static void create_timed_wall_obj([[maybe_unused]]uint8_t lendir, [[maybe_unused]]uint8_t x, [[maybe_unused]]uint8_t y) {
 
+void timed_wall_change_color(uint8_t slot, uint8_t pal) {
+    auto obj = objects[slot];
+    auto lendir = obj.param1.get();
+
+    auto len = (uint8_t)(lendir & ~(C_VERTICAL));
+    if (lendir & C_VERTICAL)
+        for (uint8_t i = 0; i < len; ++i) {
+            update_attribute(obj->x, obj->y + i * 2, pal);
+        }
+    else
+        for (uint8_t i = 0; i < len; ++i) {
+            update_attribute(obj->x + i * 2, obj->y, pal);
+        }
 }
 
+static void create_timed_wall_obj(uint8_t slot, uint8_t lendir, uint8_t x, uint8_t y) {
+    auto obj = objects[slot];
+    obj.type = ObjectType::TIMED_WALL;
+    obj.x = x;
+    obj.y = y;
+    obj.param1 = lendir;
+    timed_wall_change_color(slot, BG_PALETTE_GREEN);
+}
 
 struct WorldSpacePoint {
     uint8_t x;
@@ -56,8 +65,9 @@ static void create_wall(uint8_t slot) {
     auto [x, y] = read_pos();
     auto orig_x = x;
     auto orig_y = y;
+    auto lendir = 1;
     if (cmd & C_MULTIPLE) {
-        auto lendir = current_level[level_offset++];
+        lendir = current_level[level_offset++];
         auto len = (uint8_t)(lendir & ~(C_VERTICAL));
         for (uint8_t i=0; i<len; i++) {
             draw_metatile_2_2(Nametable::A, x, y, metatile);
@@ -67,25 +77,61 @@ static void create_wall(uint8_t slot) {
                 x += 2;
             }
         }
-        if (slot)
-            create_timed_wall_obj(lendir, orig_x, orig_y);
     } else {
         draw_metatile_2_2(Nametable::A, x, y, metatile);
-        if (slot)
-            create_timed_wall_obj(1, orig_x, orig_y);
     }
+    if (slot)
+        create_timed_wall_obj(slot, lendir, orig_x, orig_y);
 }
 
-void draw_level(uint8_t level_num) {
+const uint8_t level_hud[] = {
+    M_HORZ(3, 2, 2, SEPARATOR, SUB, SEPARATOR),
+    M_HORZ(3, 2, 12, SEPARATOR, ONE, SEPARATOR),
+    M_HORZ(3, 2, 20, SEPARATOR, TWO, SEPARATOR),
+    M_HORZ(3, 10, 22, TURN_LEFT, MOVE, TURN_RIGHT),
+    M_HORZ(3, 10, 24, WAIT, BLANK, PICKUP),
+    M_HORZ(3, 10, 26, SUB, ONE, TWO),
+    T_HORZ_REPT(20, 10, 1, MTILE_BL(BORDER_TOP)),
+    T_HORZ_REPT(20, 10, 20, MTILE_TL(BORDER_BOT)),
+    T_VERT_REPT(18, 9, 2, MTILE_BR(BORDER_LEFT)),
+    T_VERT_REPT(18, 30, 2, MTILE_BL(BORDER_RIGHT)),
+    T_ONE(9, 1, MTILE_BR(BORDER_TL_CORNER)),
+    T_ONE(30, 1, MTILE_BL(BORDER_TR_CORNER)),
+    T_ONE(9, 20, MTILE_TR(BORDER_BL_CORNER)),
+    T_ONE(30, 20, MTILE_TL(BORDER_BR_CORNER)),
+    NT_UPD_EOF
+};
+
+__attribute__((section(".prg_rom_fixed")))
+constinit auto hud_attr_rle = RLE(
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
+0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x40,0x50,0x00,0x00,0x00,0x00,
+0x00,0x00,0x08,0x0c,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
+);
+
+void draw_hud([[maybe_unused]] uint8_t level_num) {
+    // TODO check the 
+    vram_adr(NAMETABLE_A);
+    vram_fill(0, 0x400);
+    set_vram_update(level_hud);
+    flush_vram_update2();
+    set_vram_buffer();
+    vram_adr(NAMETABLE_A | 0x3c0);
+    vram_unrle(hud_attr_rle.data);
+}
+
+void load_level(uint8_t level_num) {
     current_level = all_levels[level_num];
     level_offset = 0;
     while (true) {
         cmd = current_level[level_offset++];
         switch (static_cast<LevelObjType>(static_cast<LevelObjId>(cmd).id)) {
         case LevelObjType::TERMINATOR:
+            ppu_wait_frame();
             return;
         case LevelObjType::TIMED_WALL: {
-            auto slot = load_object(ObjectType::TIMED_WALL);
+            auto slot = find_obj_slot(ObjectType::TIMED_WALL);
             create_wall(slot);
             break;
         }
@@ -95,7 +141,8 @@ void draw_level(uint8_t level_num) {
         }
         case LevelObjType::PICKUP: {
             auto [x, y] = read_pos();
-            draw_metatile_2_2(Nametable::A, x, y, Metatile::PICKUP);
+            draw_metatile_2_2(Nametable::A, x, y, Metatile::ITEM);
+            update_attribute(x, y, BG_PALETTE_GREEN);
             break;
         }
         case LevelObjType::ENEMY:
@@ -103,10 +150,9 @@ void draw_level(uint8_t level_num) {
 
             break;
         }
-        }
-        
-        if (VRAM_INDEX >= 100) {
-            ppu_wait_nmi();
+        case LevelObjType::FLUSH_VRAM:
+            ppu_wait_frame();
+            break;
         }
     }
 }

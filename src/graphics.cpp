@@ -1,8 +1,14 @@
 
+#include <neslib.h>
+
 #include "graphics.hpp"
 
-__attribute__((section(".prg_rom_fixed")))
-const soa::Array<Metatile_2_2, static_cast<uint8_t>(Metatile::COUNT)> metatiles = {
-    #include "metatile_graphics.inc"
-};
-
+void pal_fade_to(char from, char to, char duration) {
+    while (from != to) {
+        from = (from < to) ? from + 1 : from - 1;
+        pal_bright(from);
+        delay(duration);
+    }
+    // Wait one additional frame to make sure the last fade happens before exiting
+    ppu_wait_frame();
+}

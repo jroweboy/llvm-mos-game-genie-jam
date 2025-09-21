@@ -1,5 +1,7 @@
 #pragma once
 
+#include <soa.h>
+
 #include "common.hpp"
 
 #ifdef __cplusplus
@@ -9,6 +11,21 @@ extern "C" {
 // Bitpacks a 2x1 strip of tiles into a single byte
 #define LEFT_TILE(x) (((x) >> 4) & 0xf)
 #define RIGHT_TILE(x) ((x) & 0xf)
+
+#define MTILE_TL(x) ((uint8_t)LEFT_TILE(metatiles[(x)]->top))
+#define MTILE_TR(x) ((uint8_t)RIGHT_TILE(metatiles[(x)]->top))
+#define MTILE_BL(x) ((uint8_t)LEFT_TILE(metatiles[(x)]->bot))
+#define MTILE_BR(x) ((uint8_t)RIGHT_TILE(metatiles[(x)]->bot))
+
+union Attribute {
+    uint8_t raw;
+    struct {
+        uint8_t tl : 2;
+        uint8_t tr : 2;
+        uint8_t bl : 2;
+        uint8_t br : 2;
+    };
+};
 
 struct Metatile_2_2 {
     uint8_t top;
@@ -27,6 +44,11 @@ struct Metatile_4_4 {
     Metatile_2_2 topright;
     Metatile_2_2 botright;
 };
+
+
+extern const soa::Array<Metatile_2_2, Metatile::METATILE_COUNT> metatiles;
+extern Attribute attribute_buffer[0x40];
+void update_attribute(uint8_t tile_x, uint8_t tile_y, uint8_t attr);
 
 /**
  * @brief Metatile draw routines - buffers a draw to the VRAM_BUF for metatiles.

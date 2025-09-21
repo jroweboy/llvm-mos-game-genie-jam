@@ -1,23 +1,30 @@
+/* BLANK */
+R"(
+|    |
+|    |
+|    |
+|    |
+)"_mt_2_2,
 /* MOVE */
 R"(
-| o  |
-|o o |
-| o  |
-|o o |
+| oo |
+|o  o|
+|o  o|
+|    |
 )"_mt_2_2,
 /* TURN_LEFT */
 R"(
-| o  |
-| oo |
-|o   |
+|    |
+|o o |
 |oo  |
+|ooo |
 )"_mt_2_2,
 /* TURN_RIGHT */
 R"(
-|  o |
-| oo |
-|   o|
+|    |
+| o o|
 |  oo|
+| ooo|
 )"_mt_2_2,
 /* WAIT */
 R"(
@@ -119,9 +126,16 @@ R"(
 )"_mt_2_2,
 /* BORDER_BR_CORNER */
 R"(
-|    |
-|    |
-|    |
 |o   |
+|    |
+|    |
+|    |
+)"_mt_2_2,
+/* SEPARATOR */
+R"(
+|    |
+|oooo|
+|oooo|
+|    |
 )"_mt_2_2,
 

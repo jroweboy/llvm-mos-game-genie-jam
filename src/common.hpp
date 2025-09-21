@@ -8,6 +8,8 @@
 extern "C" {
 #endif
 
+#define NT_UPD_REPT 0x80
+
 enum class Nametable : uint8_t {
     A = 0x00,
     B = 0x04,
@@ -15,7 +17,8 @@ enum class Nametable : uint8_t {
     D = 0x0c,
 };
 
-enum class Metatile : uint8_t {
+enum Metatile {
+    BLANK,
     MOVE,
     TURN_LEFT,
     TURN_RIGHT,
@@ -34,7 +37,15 @@ enum class Metatile : uint8_t {
     BORDER_TR_CORNER,
     BORDER_BL_CORNER,
     BORDER_BR_CORNER,
-    COUNT,
+    SEPARATOR,
+    METATILE_COUNT,
+};
+
+enum BGColors {
+    BG_PALETTE_TAN,
+    BG_PALETTE_BLUE,
+    BG_PALETTE_RED,
+    BG_PALETTE_GREEN,
 };
 
 /**
@@ -89,7 +100,26 @@ enum class ObjectType : uint8_t {
     TIMED_WALL,
 };
 
+enum GameMode {
+    MODE_RESET = 0,
+    MODE_TITLE,
+    MODE_LOAD_LEVEL,
+    MODE_PASSWORD,
+    MODE_EDIT,
+    MODE_EXECUTE
+};
 
+extern uint8_t level;
+extern GameMode game_mode;
+
+void set_game_mode(GameMode game_mode);
+
+#define _DEBUGGER_0() { POKE(0x4018, 0); }
+#define _DEBUGGER_1(a) { POKE(0x4018, (u8)a); }
+#define _DEBUGGER_X(x,A,FUNC,...)  FUNC
+#define DEBUGGER(...) _DEBUGGER_X(,##__VA_ARGS__,\
+  _DEBUGGER_1(__VA_ARGS__),\
+  _DEBUGGER_0(__VA_ARGS__))
 
 #ifdef __cplusplus
 }

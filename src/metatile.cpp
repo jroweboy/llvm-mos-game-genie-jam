@@ -4,21 +4,84 @@
 #include <nesdoug.h>
 #include <neslib.h>
 
-#include "text_render.hpp"
-#include "graphics.hpp"
 #include "metatile.hpp"
-
-
 
 __attribute__((section(".prg_rom_fixed")))
 static const constexpr soa::Array<Metatile_2_3, Letter::COUNT> all_letters = {
     #include "font.inc"
 };
 
+
+__attribute__((section(".prg_rom_fixed")))
+constexpr soa::Array<Metatile_2_2, METATILE_COUNT> metatiles = {
+    #include "metatile_graphics.inc"
+};
+
 // Include the VRAM buffer and the VRAM_INDEX so we can write directly into the buffer ourselves.
 extern volatile uint8_t VRAM_BUF[128];
 extern volatile __zeropage uint8_t VRAM_INDEX;
 extern volatile __zeropage uint8_t NAME_UPD_ENABLE;
+
+
+Attribute attribute_buffer[0x40];
+
+constexpr uint8_t get_attr_idx(uint8_t tile_x, uint8_t tile_y) {
+    int attribute_block_x = tile_x / 4;
+    int attribute_block_y = tile_y / 4;
+    return (attribute_block_y * 8) + attribute_block_x;
+}
+
+void buffer_attribute_update(uint8_t index) {
+    int ppuaddr = (0x2300) | (uint8_t)((0xc0) + index);
+    auto idx = VRAM_INDEX;
+    VRAM_BUF[idx+ 0] = MSB(ppuaddr);
+    VRAM_BUF[idx+ 1] = LSB(ppuaddr);
+    VRAM_BUF[idx+ 2] = attribute_buffer[index].raw;
+    VRAM_BUF[idx+ 3] = 0xff;
+    VRAM_INDEX += 3;
+}
+
+void update_attribute(uint8_t tile_x, uint8_t tile_y, uint8_t attr) {
+    auto idx = get_attr_idx(tile_x, tile_y);
+    auto old = attribute_buffer[idx];
+    uint8_t shift = (uint8_t)((tile_y & 2)) | ((tile_x & 2) >> 1);
+    bool update_buffer = false;
+    switch (shift) {
+    case 0: { // top left
+        if (attr != old.tl) {
+            attribute_buffer[idx].tl = attr;
+            update_buffer = true;
+        }
+        break;
+    }
+    case 1: { // top right
+        if (attr != old.tr) {
+            attribute_buffer[idx].tr = attr;
+            update_buffer = true;
+        }
+        break;
+    }
+    case 2: { // bot left
+        if (attr != old.bl) {
+            attribute_buffer[idx].bl = attr;
+            update_buffer = true;
+        }
+        break;
+    }
+    case 3: { // bot right
+        if (attr != old.br) {
+            attribute_buffer[idx].br = attr;
+            update_buffer = true;
+        }
+        break;
+    }
+    default:
+        break;
+    }
+    if (update_buffer) {
+        buffer_attribute_update(idx);
+    }
+}
 
 
 extern "C" void draw_metatile_2_2(Nametable nmt, uint8_t x, uint8_t y, Metatile mtile_idx) {
