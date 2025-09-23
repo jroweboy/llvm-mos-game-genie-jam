@@ -6,7 +6,7 @@
 #include <neslib.h>
 
 // Helper class for compiler generated fixed point math, a simplified replacement for floating point numbers
-#include <fixed_point.h>
+#include "fixed_point2.hpp"
 
 using namespace fixedpoint_literals;
 

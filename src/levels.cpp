@@ -102,8 +102,7 @@ const uint8_t level_hud[] = {
     NT_UPD_EOF
 };
 
-__attribute__((section(".prg_rom_fixed")))
-constinit auto hud_attr_rle = RLE(
+FIXED constinit auto hud_attr_rle = RLE(
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
 0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x40,0x50,0x00,0x00,0x00,0x00,
@@ -124,11 +123,19 @@ void draw_hud([[maybe_unused]] uint8_t level_num) {
 void load_level(uint8_t level_num) {
     current_level = all_levels[level_num];
     level_offset = 0;
+    // objects[1] = {
+    //     .type = CURSOR,
+    //     .x = 10 * 8,
+    //     .y = 22 * 8,
+    //     .timer = 0,
+    //     .frame = 0,
+    //     .param1 = 4,
+    // };
     while (true) {
         cmd = current_level[level_offset++];
         switch (static_cast<LevelObjType>(static_cast<LevelObjId>(cmd).id)) {
         case LevelObjType::TERMINATOR:
-            ppu_wait_frame();
+            ppu_wait_nmi();
             return;
         case LevelObjType::TIMED_WALL: {
             auto slot = find_obj_slot(ObjectType::TIMED_WALL);
@@ -151,7 +158,7 @@ void load_level(uint8_t level_num) {
             break;
         }
         case LevelObjType::FLUSH_VRAM:
-            ppu_wait_frame();
+            ppu_wait_nmi();
             break;
         }
     }

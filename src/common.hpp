@@ -10,6 +10,8 @@ extern "C" {
 
 #define NT_UPD_REPT 0x80
 
+#define FIXED __attribute__((section(".prg_rom_fixed")))
+
 enum class Nametable : uint8_t {
     A = 0x00,
     B = 0x04,
@@ -94,10 +96,12 @@ enum Letter {
     COUNT,
 };
 
-enum class ObjectType : uint8_t {
+
+enum ObjectType {
+    NO_OBJECT,
     PLAYER,
-    ENEMY,
     TIMED_WALL,
+    PACE_ENEMY,
 };
 
 enum GameMode {
@@ -115,11 +119,33 @@ extern GameMode game_mode;
 void set_game_mode(GameMode game_mode);
 
 #define _DEBUGGER_0() { POKE(0x4018, 0); }
-#define _DEBUGGER_1(a) { POKE(0x4018, (u8)a); }
+#define _DEBUGGER_1(a) { POKE(0x4018, (uint8_t)a); }
 #define _DEBUGGER_X(x,A,FUNC,...)  FUNC
 #define DEBUGGER(...) _DEBUGGER_X(,##__VA_ARGS__,\
   _DEBUGGER_1(__VA_ARGS__),\
   _DEBUGGER_0(__VA_ARGS__))
+
+constexpr inline void wrapped_add(uint8_t& val, uint8_t v, uint8_t bound, uint8_t reset = 0) {
+    val += v;
+    if (val >= bound) {
+        val = reset;
+    }
+}
+
+constexpr inline void wrapped_sub(uint8_t& val, uint8_t v, uint8_t bound, uint8_t reset = 0) {
+    val -= v;
+    if (val <= bound) {
+        val = reset;
+    }
+}
+
+constexpr inline void wrapped_inc(uint8_t& val, uint8_t bound, uint8_t reset = 0) {
+    wrapped_add(val, 1, bound, reset);
+}
+
+constexpr inline void wrapped_dec(uint8_t& val, uint8_t bound, uint8_t reset = 0) {
+    wrapped_sub(val, 1, bound, reset);
+}
 
 #ifdef __cplusplus
 }

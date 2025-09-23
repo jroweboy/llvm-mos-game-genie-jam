@@ -11,7 +11,7 @@
 // Include our own player update function for the movable sprite.
 #include "common.hpp"
 #include "graphics.hpp"
-#include "player.hpp"
+#include "game.hpp"
 #include "text_render.hpp"
 #include "levels.hpp"
 
@@ -29,7 +29,7 @@ static const uint8_t default_palette[32] = {
     0x0f, 0x0f, 0x0f, 0x29,
 // Sprite Palette
     0x0f, 0x0f, 0x0f, 0x30,
-    0x0f, 0x0f, 0x0f, 0x0f,
+    0x0f, 0x0f, 0x0f, 0x22,
     0x0f, 0x0f, 0x0f, 0x0f,
     0x0f, 0x0f, 0x0f, 0x0f,
 };
@@ -58,7 +58,7 @@ void game_mode_title() {
         render_string(Nametable::A, 3, 14, "PRESS DOWN"_l);
         render_string(Nametable::A, 3, 17, "FOR MANUAL"_l);
         flush_vram_update2();
-        ppu_wait_frame();
+        ppu_wait_nmi();
         ppu_on_all();
         pal_fade_to(0, 4, 4);
         return;
@@ -86,7 +86,12 @@ void game_mode_load_level() {
     }
     load_level(level);
     flush_vram_update2();
-    ppu_wait_frame();
+
+    // start with sub 0 by incrementing it from sub 2
+    current_sub = SELECT_TWO;
+    update_sub_attribute();
+
+    ppu_wait_nmi();
 
     set_game_mode(MODE_EDIT);
 }
@@ -97,6 +102,7 @@ void game_mode_edit() {
         ppu_on_all();
         pal_fade_to(0, 4, 4);
     }
+    game_mode_edit_main();
 }
 
 int main() {
@@ -156,7 +162,7 @@ int main() {
         }
         
         // All done! Wait for the next frame before looping again
-        ppu_wait_frame();
+        ppu_wait_nmi();
     }
     // Tell the compiler we are never stopping the game loop!
     __builtin_unreachable();

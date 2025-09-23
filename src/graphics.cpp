@@ -10,5 +10,5 @@ void pal_fade_to(char from, char to, char duration) {
         delay(duration);
     }
     // Wait one additional frame to make sure the last fade happens before exiting
-    ppu_wait_frame();
+    ppu_wait_nmi();
 }

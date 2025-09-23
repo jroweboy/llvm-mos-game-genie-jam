@@ -38,6 +38,7 @@ target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE
     -Wno-c23-extensions # just let me use #embed pls and thx u
     -Wno-c99-extensions # and array designators!
     -Wno-vla-cxx-extension
+    -Wno-mismatched-tags
 )
 
 target_link_options(${CMAKE_PROJECT_NAME} PRIVATE
@@ -46,7 +47,7 @@ target_link_options(${CMAKE_PROJECT_NAME} PRIVATE
     -Wno-error=unused-command-line-argument
     # !! NOTICE !! If you reserve any ZEROPAGE variables in ca65, then you need to calculate how much ZP its using and
     # update this value with the total number of bytes of ZP that your ca65 code uses.
-    -mreserve-zp=1
+    -mreserve-zp=0
 
     # make functions non-recursive by default
     -fnonreentrant

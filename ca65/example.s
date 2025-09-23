@@ -13,31 +13,31 @@
 
 ; Use the ".nmi.200" segment which should put it near the end of the NMI routine.
 ; Larger numbers means later, smaller numbers means earlier
-.segment "_pnmi_p200"
-extra_nmi_code:
-    nop ; This nop will appear in the NMI routine right before the end
-    ; We don't want to add something like rts / rti here because this is part of the NMI routine
-    ; At the end of the nmi routine there is a `.nmi_end` segment that will do the rti for us
+; .segment "_pnmi_p200"
+; extra_nmi_code:
+;     nop ; This nop will appear in the NMI routine right before the end
+;     ; We don't want to add something like rts / rti here because this is part of the NMI routine
+;     ; At the end of the nmi routine there is a `.nmi_end` segment that will do the rti for us
 
-; CA65 can't know which segments use what addressing mode, so you can force it to be "zeropage" with `: zeropage`
-.segment "_pzeropage" : zeropage
-; Lets make an example variable in ca65 just to show how to use it in llvm-mos (see main.cpp for where we use it)
+; ; CA65 can't know which segments use what addressing mode, so you can force it to be "zeropage" with `: zeropage`
+; .segment "_pzeropage" : zeropage
+; ; Lets make an example variable in ca65 just to show how to use it in llvm-mos (see main.cpp for where we use it)
 
-; !! NOTICE !!: If you reserve ZEROPAGE variables in ca65, llvm-mos needs to be told how many bytes you reserved.
-; By default llvm-mos uses the zeropage space for holding temporary values, so if you reserve ZP variables, then you
-; need to update the CMakeLists.txt file to include the number of bytes you reserve. Look for the line `-mreserve-zp=`
-; and update that as well.
-.globalzp var_defined_in_ca65
-var_defined_in_ca65: .res 1
+; ; !! NOTICE !!: If you reserve ZEROPAGE variables in ca65, llvm-mos needs to be told how many bytes you reserved.
+; ; By default llvm-mos uses the zeropage space for holding temporary values, so if you reserve ZP variables, then you
+; ; need to update the CMakeLists.txt file to include the number of bytes you reserve. Look for the line `-mreserve-zp=`
+; ; and update that as well.
+; .globalzp var_defined_in_ca65
+; var_defined_in_ca65: .res 1
 
-; Instead of using the "CODE" segment, you will typically use the ".text" segment
-.segment "_ptext"
+; ; Instead of using the "CODE" segment, you will typically use the ".text" segment
+; .segment "_ptext"
 
-; In order for LLVM-MOS to reference a symbol, you will need to export it.
-; The simplest way to export a symbol is to just use .global for the label
-.global example_ca65_data
-example_ca65_data:
-.asciiz "Hello CA65!"
+; ; In order for LLVM-MOS to reference a symbol, you will need to export it.
+; ; The simplest way to export a symbol is to just use .global for the label
+; .global example_ca65_data
+; example_ca65_data:
+; .asciiz "Hello CA65!"
 
 
 ; Some common segment names in the llvm-mos-sdk are
