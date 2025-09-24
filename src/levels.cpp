@@ -1,5 +1,5 @@
 
-#include <cstddef>
+
 #include <nesdoug.h>
 #include <neslib.h>
 #include <stdint.h>
@@ -7,15 +7,13 @@
 
 #include "common.hpp"
 #include "game.hpp"
-#include "graphics.hpp"
 #include "metatile.hpp"
 #include "levels.hpp"
-#include "rle.hpp"
 
 extern volatile __zeropage uint8_t VRAM_INDEX;
 
 static const uint8_t* __zp current_level;
-static __zp uint8_t level_offset;
+// static __zp uint8_t level_offset;
 static __zp uint8_t cmd;
 
 constexpr uint8_t LEVEL_X_POS = 10;
@@ -26,8 +24,8 @@ void timed_wall_change_color(uint8_t slot, uint8_t pal) {
     auto obj = objects[slot];
     auto lendir = obj.param1.get();
 
-    auto len = (uint8_t)(lendir & ~(C_VERTICAL));
-    if (lendir & C_VERTICAL)
+    auto len = (uint8_t)(lendir & ~(L_VERTICAL));
+    if (lendir & L_VERTICAL)
         for (uint8_t i = 0; i < len; ++i) {
             update_attribute(obj->x.as_i(), obj->y.as_i() + i * 2, pal);
         }
@@ -52,7 +50,7 @@ struct WorldSpacePoint {
 };
 
 static inline WorldSpacePoint read_pos() {
-    Point p = (Point)current_level[level_offset++]; 
+    Point p = (Point)*current_level++; 
     return {
         (uint8_t)((p.x << 1) + LEVEL_X_POS),
         (uint8_t)((p.y << 1) + LEVEL_Y_POS),
@@ -66,12 +64,12 @@ static void create_wall(uint8_t slot) {
     auto orig_x = x;
     auto orig_y = y;
     auto lendir = 1;
-    if (cmd & C_MULTIPLE) {
-        lendir = current_level[level_offset++];
-        auto len = (uint8_t)(lendir & ~(C_VERTICAL));
+    if (cmd & L_MULTIPLE) {
+        lendir = *current_level++;
+        auto len = (uint8_t)(lendir & ~(L_VERTICAL));
         for (uint8_t i=0; i<len; i++) {
             draw_metatile_2_2(Nametable::A, x, y, metatile);
-            if (lendir & C_VERTICAL) {
+            if (lendir & L_VERTICAL) {
                 y += 2;
             } else {
                 x += 2;
@@ -130,12 +128,25 @@ static inline uint8_t find_obj_slot() {
     return 1;
 }
 
+static void add_command() {
+    uint8_t len = *current_level++;
+    while (len-- > 0) {
+        uint8_t next_byte = *current_level++;
+        auto [cmd0, cmd1] = UNPACK(next_byte);
+        update_command_list(cmd0);
+        if (cmd1 != CMD_END)
+            update_command_list(cmd1);
+        flush_vram_update2();
+    }
+}
+
 void load_level(uint8_t level_num) {
-    current_level = all_levels[level_num];
-    level_offset = 0;
+    current_level = (uint8_t*)SPLIT_ARRAY_POINTER(all_levels, level_num);
+    // current_level = all_levels[level_num];
+    // level_offset = 0;
     while (true) {
-        cmd = current_level[level_offset++];
-        switch (static_cast<LevelObjType>(static_cast<LevelObjId>(cmd).id)) {
+        cmd = *current_level++;
+        switch (static_cast<LevelObjType>(cmd & 0x0f)) {
         case LevelObjType::TERMINATOR:
             ppu_wait_nmi();
             return;
@@ -164,14 +175,32 @@ void load_level(uint8_t level_num) {
             break;
         }
         case LevelObjType::PLAYER:{
-            // constexpr uint8_t slot = 0;
-            // auto player = objects[slot];
+            auto [x, y] = read_pos();
+            constexpr uint8_t slot = 0;
+            auto player = objects[slot];
+            player.type = ObjectType::PLAYER;
+            player.x = x;
+            player.y = y;
+            // player.param1 = ;
 
             break;
         }
         case LevelObjType::FLUSH_VRAM:
             ppu_wait_nmi();
             break;
+        case LevelObjType::CMD_MAIN:
+            current_sub = 0;
+            add_command();
+            break;
+        case LevelObjType::CMD_ONE:
+            current_sub = 1;
+            add_command();
+            break;
+        case LevelObjType::CMD_TWO:
+            current_sub = 2;
+            add_command();
+            break;
         }
+        flush_vram_update2();
     }
 }

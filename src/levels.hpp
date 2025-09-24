@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <neslib.h>
+#include "common.hpp"
 
 enum class LevelObjType : uint8_t {
     TERMINATOR,
@@ -11,6 +12,9 @@ enum class LevelObjType : uint8_t {
     PICKUP,
     ENEMY,
     PLAYER,
+    CMD_MAIN,
+    CMD_ONE,
+    CMD_TWO,
 };
 
 enum class Facing : uint8_t {
@@ -20,68 +24,60 @@ enum class Facing : uint8_t {
     Left
 };
 
-union LevelObjId {
-    uint8_t raw;
-    struct {
-        uint8_t id : 7;
-        uint8_t multiple : 1;
-    };
-};
+// union LevelObjId {
+//     uint8_t raw;
+//     struct {
+//         uint8_t id : 6;
+//         uint8_t multiple : 4;
+//     };
+// };
 
-union LevelObjLenDir {
-    uint8_t raw;
-    struct {
-        uint8_t len : 7;
-        uint8_t dir : 1;
-    };
-};
+// union LevelObjLenDir {
+//     uint8_t raw;
+//     struct {
+//         uint8_t len : 6;
+//         uint8_t dir : 2;
+//     };
+// };
 
 void draw_hud(uint8_t level_num);
 void load_level(uint8_t level_num);
 
-constexpr uint8_t C_MULTIPLE = 1 << 7;
-constexpr uint8_t C_HORIZONTAL = 0;
-constexpr uint8_t C_VERTICAL = 1 << 7;
-constexpr uint8_t C_FACING_UP = 0b00 << 6;
-constexpr uint8_t C_FACING_RIGHT = 0b01 << 6;
-constexpr uint8_t C_FACING_DOWN = 0b10 << 6;
-constexpr uint8_t C_FACING_LEFT = 0b11 << 6;
+constexpr uint8_t L_MULTIPLE = 1 << 7;
+constexpr uint8_t L_HORIZONTAL = 0;
+constexpr uint8_t L_VERTICAL = 1 << 7;
+constexpr uint8_t L_FACING_UP = 0b00 << 6;
+constexpr uint8_t L_FACING_RIGHT = 0b01 << 6;
+constexpr uint8_t L_FACING_DOWN = 0b10 << 6;
+constexpr uint8_t L_FACING_LEFT = 0b11 << 6;
 
-#define C_POS(x, y) static_cast<uint8_t>(((x) & 0xf) << 4 | ((y) & 0xf))
-#define C_FACE(id, facing) static_cast<uint8_t>(static_cast<uint8_t>((id)) | static_cast<uint8_t>(facing))
+#define L_POS(x, y) static_cast<uint8_t>(((x) & 0xf) << 4 | ((y) & 0xf))
+#define L_FACE(id, facing) static_cast<uint8_t>(static_cast<uint8_t>((id)) | static_cast<uint8_t>(facing))
 
-#define C_ONE(id, x, y)                              \
+#define L_ONE(id, x, y)                              \
     static_cast<uint8_t>(static_cast<uint8_t>((id))),\
-    C_POS(x, y)
+    L_POS(x, y)
 
-#define C_MANY(id, direction, len, x, y)                               \
-        static_cast<uint8_t>(static_cast<uint8_t>((id)) | C_MULTIPLE), \
-        C_POS(x, y),                                                   \
+#define L_MANY(id, direction, len, x, y)                               \
+        static_cast<uint8_t>(static_cast<uint8_t>((id)) | L_MULTIPLE), \
+        L_POS(x, y),                                                   \
         static_cast<uint8_t>((len) | static_cast<uint8_t>(direction))
 
-#define C_SPAWN_ENEMY(facing, x, y) \
-    C_FACE(LevelObjType::ENEMY, facing), \
-    C_POS(x, y)
+#define L_SPAWN_ENEMY(facing, x, y) \
+    L_FACE(LevelObjType::ENEMY, facing), \
+    L_POS(x, y)
 
-#define C_PLAYER(facing, x, y) \
-    C_FACE(LevelObjType::PLAYER, facing), \
-    C_POS(x, y)
+#define L_PLAYER(facing, x, y) \
+    L_FACE(LevelObjType::PLAYER, facing), \
+    L_POS(x, y)
 
-#define C_FLUSH() static_cast<uint8_t>(LevelObjType::FLUSH_VRAM)
+#define L_FLUSH() static_cast<uint8_t>(LevelObjType::FLUSH_VRAM)
 
-#define C_END() static_cast<uint8_t>(LevelObjType::TERMINATOR)
+#define L_CMD_MAIN(len) (static_cast<uint8_t>(LevelObjType::CMD_MAIN) + 0), (len)
+#define L_CMD_ONE(len) (static_cast<uint8_t>(LevelObjType::CMD_ONE) + 12), (len)
+#define L_CMD_TWO(len) (static_cast<uint8_t>(LevelObjType::CMD_TWO) + 12 + 9), (len)
 
-#define APPLY_1(macro, a) macro(a)
-#define APPLY_2(macro, a, ...) macro(a), APPLY_1(macro, __VA_ARGS__)
-#define APPLY_3(macro, a, ...) macro(a), APPLY_2(macro, __VA_ARGS__)
-#define APPLY_4(macro, a, ...) macro(a), APPLY_3(macro, __VA_ARGS__)
-#define APPLY_5(macro, a, ...) macro(a), APPLY_4(macro, __VA_ARGS__)
-
-#define GET_APPLY_MACRO(_1, _2, _3, _4, _5, NAME, ...) NAME
-
-#define FOR_EACH(macro, ...) \
-    GET_APPLY_MACRO(__VA_ARGS__, APPLY_5, APPLY_4, APPLY_3, APPLY_2, APPLY_1)(macro, __VA_ARGS__)
-
+#define L_END static_cast<uint8_t>(LevelObjType::TERMINATOR)
 
 #define NOP(...) __VA_ARGS__
 #define M_TOP_HZ(tile) MTILE_TL(tile), MTILE_TR(tile)
@@ -141,7 +137,7 @@ constexpr uint8_t C_FACING_LEFT = 0b11 << 6;
     A_MANY_HEADER((len), NT_UPD_HORZ, x, y), \
     FOR_EACH(NOP, __VA_ARGS__)
 
-extern const uint8_t* all_levels[];
+SPLIT_ARRAY_DEFINE(all_levels);
 
 extern const uint8_t LEVEL_0[];
 extern const uint8_t LEVEL_1[];

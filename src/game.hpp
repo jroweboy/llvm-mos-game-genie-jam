@@ -39,6 +39,7 @@ enum Command {
     CMD_RETURN,
     CMD_JMP_ONE,
     CMD_JMP_TWO,
+    CMD_END, // used when storing level data to signal we finished the commands
 };
 
 #define SOA_STRUCT Object

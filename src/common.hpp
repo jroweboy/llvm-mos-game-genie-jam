@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
+#include <soa.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -172,6 +172,93 @@ constexpr inline void wrapped_dec(uint8_t& val, uint8_t bound, uint8_t reset = 0
     }
 }
 
+#define PACK(x, y) ((((x) & 0xf) << 4)|(((y) & 0xf)))
+#define UNPACK(s) (Coord{.x=(uint8_t)(((s) & 0xf0) >> 4),.y=(uint8_t)(((s) & 0xf))})
+
+
+#define APPLY_1(macro, a) macro(a)
+#define APPLY_2(macro, a, ...) macro(a), APPLY_1(macro, __VA_ARGS__)
+#define APPLY_3(macro, a, ...) macro(a), APPLY_2(macro, __VA_ARGS__)
+#define APPLY_4(macro, a, ...) macro(a), APPLY_3(macro, __VA_ARGS__)
+#define APPLY_5(macro, a, ...) macro(a), APPLY_4(macro, __VA_ARGS__)
+#define APPLY_6(macro, a, ...) macro(a), APPLY_5(macro, __VA_ARGS__)
+#define APPLY_7(macro, a, ...) macro(a), APPLY_6(macro, __VA_ARGS__)
+#define APPLY_8(macro, a, ...) macro(a), APPLY_7(macro, __VA_ARGS__)
+#define APPLY_9(macro, a, ...) macro(a), APPLY_8(macro, __VA_ARGS__)
+#define APPLY_10(macro, a, ...) macro(a), APPLY_9(macro, __VA_ARGS__)
+#define APPLY_11(macro, a, ...) macro(a), APPLY_10(macro, __VA_ARGS__)
+#define APPLY_12(macro, a, ...) macro(a), APPLY_11(macro, __VA_ARGS__)
+#define APPLY_13(macro, a, ...) macro(a), APPLY_12(macro, __VA_ARGS__)
+#define APPLY_14(macro, a, ...) macro(a), APPLY_13(macro, __VA_ARGS__)
+#define APPLY_15(macro, a, ...) macro(a), APPLY_14(macro, __VA_ARGS__)
+#define APPLY_16(macro, a, ...) macro(a), APPLY_15(macro, __VA_ARGS__)
+
+#define GET_APPLY_MACRO(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, NAME, ...) NAME
+
+#define FOR_EACH(macro, ...) \
+    GET_APPLY_MACRO(__VA_ARGS__, APPLY_16, \
+        APPLY_15, APPLY_14, APPLY_13, APPLY_12, APPLY_11, \
+        APPLY_10, APPLY_9, APPLY_8, APPLY_7, APPLY_6, \
+        APPLY_5, APPLY_4, APPLY_3, APPLY_2, APPLY_1)(macro, __VA_ARGS__)
+
+
+
+#define COMBINE_1(macro, a) macro(a)
+#define COMBINE_2(macro, a, ...) macro(a) COMBINE_1(macro, __VA_ARGS__)
+#define COMBINE_3(macro, a, ...) macro(a) COMBINE_2(macro, __VA_ARGS__)
+#define COMBINE_4(macro, a, ...) macro(a) COMBINE_3(macro, __VA_ARGS__)
+#define COMBINE_5(macro, a, ...) macro(a) COMBINE_4(macro, __VA_ARGS__)
+#define COMBINE_6(macro, a, ...) macro(a) COMBINE_5(macro, __VA_ARGS__)
+#define COMBINE_7(macro, a, ...) macro(a) COMBINE_6(macro, __VA_ARGS__)
+#define COMBINE_8(macro, a, ...) macro(a) COMBINE_7(macro, __VA_ARGS__)
+#define COMBINE_9(macro, a, ...) macro(a) COMBINE_8(macro, __VA_ARGS__)
+#define COMBINE_10(macro, a, ...) macro(a) COMBINE_9(macro, __VA_ARGS__)
+#define COMBINE_11(macro, a, ...) macro(a) COMBINE_10(macro, __VA_ARGS__)
+#define COMBINE_12(macro, a, ...) macro(a) COMBINE_11(macro, __VA_ARGS__)
+#define COMBINE_13(macro, a, ...) macro(a) COMBINE_12(macro, __VA_ARGS__)
+#define COMBINE_14(macro, a, ...) macro(a) COMBINE_13(macro, __VA_ARGS__)
+#define COMBINE_15(macro, a, ...) macro(a) COMBINE_14(macro, __VA_ARGS__)
+#define COMBINE_16(macro, a, ...) macro(a) COMBINE_15(macro, __VA_ARGS__)
+
+#define GET_COMBINE_MACRO(_1, _2, _3, _4, _5, _6, _7, _8, _9, _10, _11, _12, _13, _14, _15, _16, NAME, ...) NAME
+
+#define COMBINE_FOR_EACH(macro, ...) \
+    GET_COMBINE_MACRO(__VA_ARGS__, COMBINE_16, \
+        COMBINE_15, COMBINE_14, COMBINE_13, COMBINE_12, COMBINE_11, \
+        COMBINE_10, COMBINE_9, COMBINE_8, COMBINE_7, COMBINE_6, \
+        COMBINE_5, COMBINE_4, COMBINE_3, COMBINE_2, COMBINE_1)(macro, __VA_ARGS__)
+
+#define SPLIT_ARRAY_LO_BYTE(n) ".byte " #n "@mos16lo\n"
+#define SPLIT_ARRAY_HI_BYTE(n) ".byte " #n "@mos16hi\n"
+
+#define SPLIT_ARRAY_DEFINE(name) \
+    extern const unsigned char name##_lo_table[]; \
+    extern const unsigned char name##_hi_table[];
+
+#define SPLIT_ARRAY_IMPL(name, ...) \
+    __asm__(".globl " #name "_lo_table\n  .globl " #name "_hi_table\n" \
+        "" #name "_lo_table:\n" \
+        COMBINE_FOR_EACH(SPLIT_ARRAY_LO_BYTE, __VA_ARGS__) \
+        "" #name "_hi_table:\n" \
+        COMBINE_FOR_EACH(SPLIT_ARRAY_HI_BYTE, __VA_ARGS__) \
+    );
+
+#define SPLIT_ARRAY(name, ...)\
+    SPLIT_ARRAY_DEFINE(name)\
+    SPLIT_ARRAY_IMPL(name, __VA_ARGS__)
+
+#define SPLIT_ARRAY_POINTER(name, idx) \
+    (void*)( name##_hi_table[idx] << 8 | name##_lo_table[idx])
+
 #ifdef __cplusplus
 }
 #endif
+
+
+struct Coord {
+    uint8_t x;
+    uint8_t y;
+};
+#define SOA_STRUCT Coord
+#define SOA_MEMBERS MEMBER(x) MEMBER(y)
+#include <soa-struct.inc>

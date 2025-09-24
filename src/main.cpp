@@ -3,6 +3,7 @@
 #include <cstdint>
 
 // Common C NES libary that includes a simple NMI update routine
+#include <cstdlib>
 #include <neslib.h>
 
 // Add-ons to the neslib, bringing metatile support and more
@@ -80,16 +81,11 @@ void game_mode_title() {
 
 void game_mode_load_level() {
     ppu_off();
+
     if (prev_mode != MODE_LOAD_LEVEL && prev_mode != MODE_EDIT && prev_mode != MODE_EXECUTE) {
         prev_mode = MODE_LOAD_LEVEL;
         draw_hud(level);
     }
-    load_level(level);
-    flush_vram_update2();
-
-    // start with sub 0 by incrementing it from sub 2
-    // current_sub = SELECT_TWO;
-    // update_sub_attribute();
 
     // Draw all of the WAIT symbols
     for (uint8_t i=0; i<12; i++) {
@@ -107,6 +103,9 @@ void game_mode_load_level() {
         flush_vram_update2();
     }
     update_sub_attribute();
+    flush_vram_update2();
+
+    load_level(level);
 
     ppu_wait_nmi();
 
@@ -140,7 +139,7 @@ int main() {
     // Upload a basic palette we can use later.
     pal_all(default_palette);
 
-    pal_bright(4);
+    pal_bright(0);
     flush_vram_update2();
     
     // Set the scroll position on the screen to 0, 0
@@ -177,6 +176,9 @@ int main() {
         case MODE_EXECUTE:
             break;
         case MODE_PASSWORD:
+            uint8_t random = rand();
+            level = random;
+            game_mode_load_level();
             break;
         }
         

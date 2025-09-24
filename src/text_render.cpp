@@ -15,9 +15,6 @@
     Font definitions
 */
 
-[[maybe_unused]]
-static const Letter* test_string = "01001"_l;
-
 // Include the VRAM buffer and the VRAM_INDEX so we can write directly into the buffer ourselves.
 extern volatile uint8_t VRAM_BUF[128];
 extern volatile __zeropage uint8_t VRAM_INDEX;

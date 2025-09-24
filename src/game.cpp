@@ -5,7 +5,6 @@
 #include <soa.h>
 
 #include <neslib.h>
-#include <stdlib.h>
 
 #include "game.hpp"
 #include "common.hpp"
@@ -35,16 +34,6 @@ uint8_t commands[12 + 9 + 9];
 uint8_t command_index[3];
 uint8_t current_sub;
 
-struct Coord {
-    uint8_t x;
-    uint8_t y;
-};
-#define SOA_STRUCT Coord
-#define SOA_MEMBERS MEMBER(x) MEMBER(y)
-#include <soa-struct.inc>
-
-#define PACK(x, y) ((((x) & 0xf) << 4)|(((y) & 0xf)))
-#define UNPACK(s) (Coord{.x=(uint8_t)(((s) & 0xf0) >> 4),.y=(uint8_t)(((s) & 0xf))})
 
 constinit const uint8_t sub_attr_y_lut[] = { 2, 12, 20 };
 
