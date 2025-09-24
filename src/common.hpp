@@ -125,26 +125,51 @@ void set_game_mode(GameMode game_mode);
   _DEBUGGER_1(__VA_ARGS__),\
   _DEBUGGER_0(__VA_ARGS__))
 
-constexpr inline void wrapped_add(uint8_t& val, uint8_t v, uint8_t bound, uint8_t reset = 0) {
-    val += v;
-    if (val >= bound) {
-        val = reset;
+// constexpr inline void wrapped_add(uint8_t& val, uint8_t v, uint8_t bound, uint8_t reset = 0) {
+//     val += v;
+//     if ((int8_t)val >= (int8_t)bound) {
+//         val = reset + (val - bound);
+//     }
+// }
+
+// constexpr inline void wrapped_sub(uint8_t& val, uint8_t v, uint8_t bound, uint8_t reset = 0) {
+//     val -= v;
+//     if ((int8_t)val < (int8_t)bound-1) {
+//         val = reset + (val + bound);
+//     }
+// }
+constexpr inline void wrapped_add(uint8_t& value, uint8_t add_val, uint8_t lower_bound, uint8_t upper_bound) {
+    value += add_val;
+    
+    // Check if we exceeded upper bound
+    if (value > upper_bound) {
+        // Wrap to lower bound + overflow amount
+        value = lower_bound + (value - upper_bound);
     }
 }
 
-constexpr inline void wrapped_sub(uint8_t& val, uint8_t v, uint8_t bound, uint8_t reset = 0) {
-    val -= v;
-    if (val <= bound) {
-        val = reset;
+constexpr inline void wrapped_sub(uint8_t& value, uint8_t sub_val, uint8_t lower_bound, uint8_t upper_bound) {
+    value -= sub_val;
+    
+    // Check if we went below lower bound  
+    if ((int8_t)value < (int8_t)lower_bound) {
+        // Wrap to upper bound - underflow amount
+        value = upper_bound + (value - lower_bound);
     }
 }
 
 constexpr inline void wrapped_inc(uint8_t& val, uint8_t bound, uint8_t reset = 0) {
-    wrapped_add(val, 1, bound, reset);
+    val++;
+    if ((int8_t)val >= (int8_t)bound) {
+        val = reset;
+    }
 }
 
 constexpr inline void wrapped_dec(uint8_t& val, uint8_t bound, uint8_t reset = 0) {
-    wrapped_sub(val, 1, bound, reset);
+    val--;
+    if ((int8_t)val < (int8_t)bound-1) {
+        val = reset;
+    }
 }
 
 #ifdef __cplusplus

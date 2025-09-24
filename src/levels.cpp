@@ -29,11 +29,11 @@ void timed_wall_change_color(uint8_t slot, uint8_t pal) {
     auto len = (uint8_t)(lendir & ~(C_VERTICAL));
     if (lendir & C_VERTICAL)
         for (uint8_t i = 0; i < len; ++i) {
-            update_attribute(obj->x, obj->y + i * 2, pal);
+            update_attribute(obj->x.as_i(), obj->y.as_i() + i * 2, pal);
         }
     else
         for (uint8_t i = 0; i < len; ++i) {
-            update_attribute(obj->x + i * 2, obj->y, pal);
+            update_attribute(obj->x.as_i() + i * 2, obj->y.as_i(), pal);
         }
 }
 
@@ -88,9 +88,6 @@ const uint8_t level_hud[] = {
     M_HORZ(3, 2, 2, SEPARATOR, SUB, SEPARATOR),
     M_HORZ(3, 2, 12, SEPARATOR, ONE, SEPARATOR),
     M_HORZ(3, 2, 20, SEPARATOR, TWO, SEPARATOR),
-    M_HORZ(3, 10, 22, TURN_LEFT, MOVE, TURN_RIGHT),
-    M_HORZ(3, 10, 24, WAIT, BLANK, PICKUP),
-    M_HORZ(3, 10, 26, SUB, ONE, TWO),
     T_HORZ_REPT(20, 10, 1, MTILE_BL(BORDER_TOP)),
     T_HORZ_REPT(20, 10, 20, MTILE_TL(BORDER_BOT)),
     T_VERT_REPT(18, 9, 2, MTILE_BR(BORDER_LEFT)),
@@ -102,12 +99,14 @@ const uint8_t level_hud[] = {
     NT_UPD_EOF
 };
 
-FIXED constinit auto hud_attr_rle = RLE(
-0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,
-0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x40,0x50,0x00,0x00,0x00,0x00,
-0x00,0x00,0x08,0x0c,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00
-);
+const uint8_t level_hud_2[] = {
+    A_HORZ(2, 8, 20, 0xc0, 0x90),
+    A_HORZ(2, 8, 24, 0x80, 0x7c),
+    M_HORZ(3, 10, 22, TURN_LEFT, MOVE, TURN_RIGHT),
+    M_HORZ(3, 10, 24, WAIT, BLANK, PICKUP),
+    M_HORZ(3, 10, 26, SUB, ONE, TWO),
+    NT_UPD_EOF
+};
 
 void draw_hud([[maybe_unused]] uint8_t level_num) {
     // TODO check the 
@@ -115,22 +114,25 @@ void draw_hud([[maybe_unused]] uint8_t level_num) {
     vram_fill(0, 0x400);
     set_vram_update(level_hud);
     flush_vram_update2();
+    set_vram_update(level_hud_2);
+    flush_vram_update2();
+    
     set_vram_buffer();
-    vram_adr(NAMETABLE_A | 0x3c0);
-    vram_unrle(hud_attr_rle.data);
+}
+
+static inline uint8_t find_obj_slot() {
+    for (int i=1; i<8; i++) {
+        auto obj = objects[i];
+        if (obj->type == NO_OBJECT) {
+            return i;
+        }
+    }
+    return 1;
 }
 
 void load_level(uint8_t level_num) {
     current_level = all_levels[level_num];
     level_offset = 0;
-    // objects[1] = {
-    //     .type = CURSOR,
-    //     .x = 10 * 8,
-    //     .y = 22 * 8,
-    //     .timer = 0,
-    //     .frame = 0,
-    //     .param1 = 4,
-    // };
     while (true) {
         cmd = current_level[level_offset++];
         switch (static_cast<LevelObjType>(static_cast<LevelObjId>(cmd).id)) {
@@ -138,7 +140,7 @@ void load_level(uint8_t level_num) {
             ppu_wait_nmi();
             return;
         case LevelObjType::TIMED_WALL: {
-            auto slot = find_obj_slot(ObjectType::TIMED_WALL);
+            auto slot = find_obj_slot();
             create_wall(slot);
             break;
         }
@@ -152,8 +154,18 @@ void load_level(uint8_t level_num) {
             update_attribute(x, y, BG_PALETTE_GREEN);
             break;
         }
-        case LevelObjType::ENEMY:
+        case LevelObjType::ENEMY: {
+            auto [x, y] = read_pos();
+            auto slot = find_obj_slot();
+            auto enemy = objects[slot];
+            enemy.type = ObjectType::PACE_ENEMY;
+            enemy.x = x;
+            
+            break;
+        }
         case LevelObjType::PLAYER:{
+            // constexpr uint8_t slot = 0;
+            // auto player = objects[slot];
 
             break;
         }

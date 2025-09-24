@@ -88,7 +88,24 @@ void game_mode_load_level() {
     flush_vram_update2();
 
     // start with sub 0 by incrementing it from sub 2
-    current_sub = SELECT_TWO;
+    // current_sub = SELECT_TWO;
+    // update_sub_attribute();
+
+    // Draw all of the WAIT symbols
+    for (uint8_t i=0; i<12; i++) {
+        update_command_list(Command::CMD_WAIT);
+        flush_vram_update2();
+    }
+    update_sub_attribute();
+    for (uint8_t i=0; i<9; i++) {
+        update_command_list(Command::CMD_WAIT);
+        flush_vram_update2();
+    }
+    update_sub_attribute();
+    for (uint8_t i=0; i<9; i++) {
+        update_command_list(Command::CMD_WAIT);
+        flush_vram_update2();
+    }
     update_sub_attribute();
 
     ppu_wait_nmi();
@@ -128,11 +145,13 @@ int main() {
     
     // Set the scroll position on the screen to 0, 0
     scroll(0, 0);
+
+    // Force the sub index for the command slots
+    command_index[1] = 12;
+    command_index[2] = 12 + 9;
     
     // Turn on the screen, showing both the background and sprites
     // ppu_on_all();
-
-    // draw_level(0);
 
     // Now time to start the main game loop
     while (true) {

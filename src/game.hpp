@@ -17,15 +17,13 @@ union Point {
 };
 
 struct PlayerExtra {
-    fu8_8 x;
-    fu8_8 y;
     uint8_t frame;
 };
 
 struct Object {
     ObjectType type;
-    uint8_t x;
-    uint8_t y;
+    fu8_8 x;
+    fu8_8 y;
     uint8_t frame;
     uint8_t timer;
     uint8_t param1;
@@ -55,14 +53,14 @@ enum SelectionMode {
     SELECT_TWO,
 };
 
-extern uint8_t main_commands[12];
-extern uint8_t one_commands[9];
-extern uint8_t two_commands[9];
+extern const uint8_t command_attr_lut[9];
+extern uint8_t commands[12 + 9 + 9];
+extern uint8_t command_index[3];
 extern uint8_t current_sub;
 
 void update_sub_attribute();
 void game_mode_edit_main();
+void update_command_list(uint8_t new_command);
 
-
-uint8_t find_obj_slot(ObjectType t);
+// uint8_t find_obj_slot(ObjectType t);
 

@@ -23,7 +23,7 @@ extern volatile __zeropage uint8_t VRAM_INDEX;
 extern volatile __zeropage uint8_t NAME_UPD_ENABLE;
 
 
-Attribute attribute_buffer[0x40];
+uint8_t attribute_buffer[0x40];
 
 constexpr uint8_t get_attr_idx(uint8_t tile_x, uint8_t tile_y) {
     int attribute_block_x = tile_x / 4;
@@ -36,53 +36,49 @@ void buffer_attribute_update(uint8_t index) {
     auto idx = VRAM_INDEX;
     VRAM_BUF[idx+ 0] = MSB(ppuaddr);
     VRAM_BUF[idx+ 1] = LSB(ppuaddr);
-    VRAM_BUF[idx+ 2] = attribute_buffer[index].raw;
+    VRAM_BUF[idx+ 2] = attribute_buffer[index];
     VRAM_BUF[idx+ 3] = 0xff;
     VRAM_INDEX += 3;
 }
 
+constinit uint8_t attr_shift_lut[16] = {
+    // tl
+    0b00 << 0, 0b01 << 0, 0b10 << 0, 0b11 << 0,
+    // tr
+    0b00 << 2, 0b01 << 2, 0b10 << 2, 0b11 << 2,
+    // bl
+    0b00 << 4, 0b01 << 4, 0b10 << 4, 0b11 << 4,
+    // br
+    0b00 << 6, 0b01 << 6, 0b10 << 6, 0b11 << 6
+};
+constinit uint8_t attr_bit_lut[4] = {
+    (uint8_t)(0b11 << 0),
+    (uint8_t)(0b11 << 2),
+    (uint8_t)(0b11 << 4),
+    (uint8_t)(0b11 << 6),
+};
+constinit uint8_t attr_mask_lut[4] = {
+    (uint8_t)~(0b11 << 0),
+    (uint8_t)~(0b11 << 2),
+    (uint8_t)~(0b11 << 4),
+    (uint8_t)~(0b11 << 6),
+};
+
 void update_attribute(uint8_t tile_x, uint8_t tile_y, uint8_t attr) {
     auto idx = get_attr_idx(tile_x, tile_y);
     auto old = attribute_buffer[idx];
-    uint8_t shift = (uint8_t)((tile_y & 2)) | ((tile_x & 2) >> 1);
+    uint8_t quadrant = (uint8_t)((tile_y & 2)) | ((tile_x & 2) >> 1);
+    uint8_t shifted_value = attr_shift_lut[quadrant << 2 | attr];
+    uint8_t orig_shifted_value = old & attr_bit_lut[quadrant];
     bool update_buffer = false;
-    switch (shift) {
-    case 0: { // top left
-        if (attr != old.tl) {
-            attribute_buffer[idx].tl = attr;
-            update_buffer = true;
-        }
-        break;
-    }
-    case 1: { // top right
-        if (attr != old.tr) {
-            attribute_buffer[idx].tr = attr;
-            update_buffer = true;
-        }
-        break;
-    }
-    case 2: { // bot left
-        if (attr != old.bl) {
-            attribute_buffer[idx].bl = attr;
-            update_buffer = true;
-        }
-        break;
-    }
-    case 3: { // bot right
-        if (attr != old.br) {
-            attribute_buffer[idx].br = attr;
-            update_buffer = true;
-        }
-        break;
-    }
-    default:
-        break;
+    if (orig_shifted_value != shifted_value) {
+        attribute_buffer[idx] = (attribute_buffer[idx] & attr_mask_lut[quadrant]) | shifted_value;
+        update_buffer = true;
     }
     if (update_buffer) {
         buffer_attribute_update(idx);
     }
 }
-
 
 extern "C" void draw_metatile_2_2(Nametable nmt, uint8_t x, uint8_t y, Metatile mtile_idx) {
     auto tile = metatiles[static_cast<uint8_t>(mtile_idx)];

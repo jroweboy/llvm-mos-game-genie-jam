@@ -7,10 +7,10 @@ R"(
 )"_mt_2_2,
 /* MOVE */
 R"(
-| oo |
-|o  o|
-|o  o|
-|    |
+|  o |
+| ooo|
+|o o |
+|  o |
 )"_mt_2_2,
 /* TURN_LEFT */
 R"(
@@ -28,10 +28,10 @@ R"(
 )"_mt_2_2,
 /* WAIT */
 R"(
+|    |
 | oo |
-|oooo|
-|oooo|
 | oo |
+|    |
 )"_mt_2_2,
 /* PICKUP */
 R"(

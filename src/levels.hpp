@@ -83,15 +83,18 @@ constexpr uint8_t C_FACING_LEFT = 0b11 << 6;
     GET_APPLY_MACRO(__VA_ARGS__, APPLY_5, APPLY_4, APPLY_3, APPLY_2, APPLY_1)(macro, __VA_ARGS__)
 
 
-
-
-#define NOP
+#define NOP(...) __VA_ARGS__
 #define M_TOP_HZ(tile) MTILE_TL(tile), MTILE_TR(tile)
 #define M_BOT_HZ(tile) MTILE_BL(tile), MTILE_BR(tile)
 
 #define MANY_HEADER(len, dir, x, y) \
     MSB((NAMETABLE_A) | (((y) << 5) | (x))) | (dir), \
     LSB((NAMETABLE_A) | (((y) << 5) | (x))) \
+
+#define A_MANY_HEADER(len, dir, x, y) \
+    MSB((NAMETABLE_A | 0x3c0) + (((y / 4) * 8) | (x / 4))) | (dir), \
+    LSB((NAMETABLE_A | 0x3c0) + (((y / 4) * 8) | (x / 4))), \
+    (len)
 
 #define T_MANY_HEADER(len, dir, x, y) \
     MANY_HEADER(len, dir, x, y), \
@@ -122,7 +125,7 @@ constexpr uint8_t C_FACING_LEFT = 0b11 << 6;
 // Draw a horizontal strip of tiles
 #define T_HORZ(len, x, y, ...) \
     T_MANY_HEADER(len, NT_UPD_HORZ, x, y) \
-    FOR_EACH(NOP, __VAR_ARGS__)
+    FOR_EACH(NOP, __VA_ARGS__)
 
 // Draw a horizontal strip of tiles, repeating a single tile
 #define T_HORZ_REPT(len, x, y, tile) \
@@ -134,6 +137,9 @@ constexpr uint8_t C_FACING_LEFT = 0b11 << 6;
     T_MANY_HEADER((len) | NT_UPD_REPT, NT_UPD_VERT, x, y), \
     (tile)
 
+#define A_HORZ(len, x, y, ...) \
+    A_MANY_HEADER((len), NT_UPD_HORZ, x, y), \
+    FOR_EACH(NOP, __VA_ARGS__)
 
 extern const uint8_t* all_levels[];
 
