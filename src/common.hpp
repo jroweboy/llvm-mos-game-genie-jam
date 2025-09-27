@@ -41,6 +41,7 @@ enum Metatile {
     BORDER_BL_CORNER,
     BORDER_BR_CORNER,
     SEPARATOR,
+    SMALL_X,
     METATILE_COUNT,
 };
 
@@ -172,6 +173,19 @@ constexpr inline void wrapped_dec(uint8_t& val, uint8_t bound, uint8_t reset = 0
         val = reset;
     }
 }
+
+
+// Custom MIN/MAX macros that do not double evaluate the inputs
+#define MMAX(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a > _b ? _a : _b; })
+
+#define MMIN(a,b) \
+   ({ __typeof__ (a) _a = (a); \
+       __typeof__ (b) _b = (b); \
+     _a > _b ? _b : _a; })
+
 
 #define PACK(x, y) ((((x) & 0xf) << 4)|(((y) & 0xf)))
 #define UNPACK(s) (Coord{.x=(uint8_t)(((s) & 0xf0) >> 4),.y=(uint8_t)(((s) & 0xf))})

@@ -33,17 +33,18 @@ extern volatile __zeropage uint8_t VRAM_INDEX;
 uint8_t commands[12 + 9 + 9];
 uint8_t command_index[3];
 uint8_t current_sub;
+static bool is_twox_speed;
 
 
-constinit const uint8_t sub_attr_y_lut[] = { 2, 12, 20 };
+constinit FIXED const uint8_t sub_attr_y_lut[] = { 2, 12, 20 };
 
 soa::Array<Cursor, 2> cursors;
 
 
-constinit static const uint8_t command_lower_bound_lut[] = { 0, 12, 12 + 9 };
-constinit static const uint8_t command_upper_bound_lut[] = { 12, 12 + 9, 12 + 9 + 9 };
+constinit FIXED static const uint8_t command_lower_bound_lut[] = { 0, 12, 12 + 9 };
+constinit FIXED static const uint8_t command_upper_bound_lut[] = { 12, 12 + 9, 12 + 9 + 9 };
 
-constinit const uint8_t cursor_command_lut[9] = {
+constinit FIXED const uint8_t cursor_command_lut[9] = {
     Command::CMD_TURN_LEFT,
     Command::CMD_MOVE,
     Command::CMD_TURN_RIGHT,
@@ -55,7 +56,7 @@ constinit const uint8_t cursor_command_lut[9] = {
     Command::CMD_JMP_TWO,
 };
 
-constinit const Metatile command_metatile_lut[9] = {
+constinit FIXED const Metatile command_metatile_lut[9] = {
     Metatile::WAIT,
     Metatile::MOVE,
     Metatile::TURN_LEFT,
@@ -66,7 +67,7 @@ constinit const Metatile command_metatile_lut[9] = {
     Metatile::TWO,
     Metatile::WAIT, // unused
 };
-constinit const uint8_t command_attr_lut[9] = {
+constinit FIXED const uint8_t command_attr_lut[9] = {
     BG_PALETTE_TAN, // Metatile::WAIT,
     BG_PALETTE_BLUE, // Metatile::MOVE,
     BG_PALETTE_GREEN, // Metatile::TURN_LEFT,
@@ -98,7 +99,7 @@ const Letter* command_strings[9] = {
     WORD_JMP_2,
 };
 
-const uint8_t command_to_string_lut[9] = {
+constinit FIXED const uint8_t command_to_string_lut[9] = {
     3, // WAIT
     1, // MOVE
     0, // TURN LEFT
@@ -114,7 +115,7 @@ const uint8_t command_to_string_lut[9] = {
 //     return 1;
 // }
 
-constinit const uint8_t command_position_lut[12 + 9 + 9] {
+constinit FIXED const uint8_t command_position_lut[12 + 9 + 9] {
     PACK(1, 2),PACK(2, 2),PACK(3, 2),
     PACK(1, 3),PACK(2, 3),PACK(3, 3),
     PACK(1, 4),PACK(2, 4),PACK(3, 4),
@@ -172,7 +173,8 @@ void update_command_list(uint8_t new_command) {
     wrapped_inc(idx, upper_bound, lower_bound);
 }
 
-constexpr int8_t minimum_velocity = 1;
+constexpr int8_t minimum_velocity = 2;
+constexpr int8_t maximum_velocity = 8;
 
 void move_object(uint8_t slot) {
     auto object = objects[slot];
@@ -223,15 +225,15 @@ void move_cursor(uint8_t slot) {
         cursor.is_moving = false;
     }
     
-    if (cursor->x_vel < -minimum_velocity*2)
-        cursor.x_vel = (cursor->target_x - cursor->x) >> 2;
-    else if (cursor->x_vel > minimum_velocity*2)
-        cursor.x_vel = (cursor->target_x - cursor->x) >> 2;
+    if (cursor->x_vel < -minimum_velocity)
+        cursor.x_vel = MMAX((cursor->target_x - cursor->x) >> 2, -maximum_velocity);
+    else if (cursor->x_vel > minimum_velocity)
+        cursor.x_vel = MMIN((cursor->target_x - cursor->x) >> 2, maximum_velocity);
     
-    if (cursor->y_vel < -minimum_velocity*2)
-        cursor.y_vel = (cursor->target_y - cursor->y) >> 2;
-    else if (cursor->y_vel >= minimum_velocity*2)
-        cursor.y_vel = (cursor->target_y - cursor->y) >> 2;
+    if (cursor->y_vel < -minimum_velocity)
+        cursor.y_vel = MMAX((cursor->target_y - cursor->y) >> 2, -maximum_velocity);
+    else if (cursor->y_vel >= minimum_velocity)
+        cursor.y_vel = MMIN((cursor->target_y - cursor->y) >> 2, maximum_velocity);
 }
 
 constexpr uint8_t X_LO_BOUND = (10 * 8);
@@ -286,6 +288,14 @@ static void set_cursor_target(uint8_t idx, Coord target) {
     cursor.target_y = target.y;
     cursor.x_vel = (cursor->target_x - cursor->x) / 2;
     cursor.y_vel = (cursor->target_y - cursor->y) / 2;
+    if (cursor->x_vel < 0)
+        cursor.x_vel = MMIN(cursor->x_vel, -maximum_velocity);
+    else
+        cursor.x_vel = MMAX(cursor->x_vel, maximum_velocity);
+    if (cursor->y_vel < 0)
+        cursor.y_vel = MMIN(cursor->y_vel, -maximum_velocity);
+    else
+        cursor.y_vel = MMAX(cursor->y_vel, maximum_velocity);
 }
 
 static void move_cmd_cursor(uint8_t diff) {
@@ -451,26 +461,26 @@ void game_mode_edit_main() {
 }
 
 constexpr fs8_8 MOVE_SPEED = 0.75_s8_8;
-constinit fs8_8 x_movement_velocity[4] = {
+constinit FIXED const fs8_8 x_movement_velocity[4] = {
     0,
     MOVE_SPEED,
     0,
     -MOVE_SPEED,
 };
-constinit fs8_8 y_movement_velocity[4] = {
+constinit FIXED const fs8_8 y_movement_velocity[4] = {
     -MOVE_SPEED,
     0,
     MOVE_SPEED,
     0,
 };
 
-constinit int8_t x_movement[4] = {
+constinit FIXED const int8_t x_movement[4] = {
     0,
     16,
     0,
     -16,
 };
-constinit int8_t y_movement[4] = {
+constinit FIXED const int8_t y_movement[4] = {
     -16,
     0,
     16,
@@ -564,7 +574,11 @@ void game_mode_execute_main() {
     }
 
     clear_command_string(false);
-    delay(60);
+
+    uint8_t base_frame_length = 30;
+    if (is_twox_speed)
+        base_frame_length = 15;
+    delay(base_frame_length);
 
     // wait a bit before starting
     auto id = commands[command_index[current_sub]];
@@ -587,7 +601,7 @@ void game_mode_execute_main() {
 
         if (frame_length == 0) {
             execute_action(0);
-            frame_length = 30;
+            frame_length = base_frame_length;
             auto id = commands[command_index[current_sub]];
             draw_command_string(command_to_string_lut[id]);
 
@@ -606,8 +620,6 @@ void game_mode_execute_main() {
             
             auto target = get_pos_from_index();
             set_cursor_target(1, target);
-            // just_started = true;
-
         } else {
             if (cmdcursor->is_moving) {
                 move_cursor(1);

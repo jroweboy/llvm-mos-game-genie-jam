@@ -41,7 +41,7 @@ void buffer_attribute_update(uint8_t index) {
     VRAM_INDEX += 3;
 }
 
-constinit uint8_t attr_shift_lut[16] = {
+constinit FIXED static const uint8_t attr_shift_lut[16] = {
     // tl
     0b00 << 0, 0b01 << 0, 0b10 << 0, 0b11 << 0,
     // tr
@@ -51,13 +51,13 @@ constinit uint8_t attr_shift_lut[16] = {
     // br
     0b00 << 6, 0b01 << 6, 0b10 << 6, 0b11 << 6
 };
-constinit uint8_t attr_bit_lut[4] = {
+constinit FIXED static const uint8_t attr_bit_lut[4] = {
     (uint8_t)(0b11 << 0),
     (uint8_t)(0b11 << 2),
     (uint8_t)(0b11 << 4),
     (uint8_t)(0b11 << 6),
 };
-constinit uint8_t attr_mask_lut[4] = {
+constinit FIXED static const uint8_t attr_mask_lut[4] = {
     (uint8_t)~(0b11 << 0),
     (uint8_t)~(0b11 << 2),
     (uint8_t)~(0b11 << 4),

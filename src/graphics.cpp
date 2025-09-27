@@ -74,7 +74,7 @@ void draw_player() {
     oam_meta_spr(player->x.as_i(), player->y.as_i(), mspr);
 }
 
-constinit static uint8_t cursor_expand_timer_lut[] = {
+constinit FIXED static const uint8_t cursor_expand_timer_lut[] = {
     12, 10, 8, 6, 6, 6, 8, 10
 };
 

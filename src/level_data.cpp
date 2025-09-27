@@ -6,8 +6,8 @@
 #include "levels.hpp"
 
 
-const Letter* LEVEL_TITLE_FREEBIE = "FREEBIE"_l;
-const Letter* LEVEL_TITLE_ZIGZAG = "ZIG ZAG DRAG"_l;
+FIXED const Letter* LEVEL_TITLE_FREEBIE = "FREEBIE"_l;
+FIXED const Letter* LEVEL_TITLE_ZIGZAG = "ZIG ZAG DRAG"_l;
 
 SPLIT_ARRAY_IMPL(level_titles,
     LEVEL_TITLE_FREEBIE,
