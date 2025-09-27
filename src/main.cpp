@@ -29,7 +29,7 @@ static const uint8_t default_palette[32] = {
     0x0f, 0x0f, 0x0f, 0x16,
     0x0f, 0x0f, 0x0f, 0x29,
 // Sprite Palette
-    0x0f, 0x0f, 0x0f, 0x30,
+    0x0f, 0x0f, 0x0f, 0x0f,
     0x0f, 0x0f, 0x0f, 0x22,
     0x0f, 0x0f, 0x0f, 0x0f,
     0x0f, 0x0f, 0x0f, 0x0f,
@@ -106,19 +106,29 @@ void game_mode_load_level() {
     flush_vram_update2();
 
     load_level(level);
-
     ppu_wait_nmi();
 
     set_game_mode(MODE_EDIT);
 }
 
 void game_mode_edit() {
-    if (prev_mode != MODE_EDIT) {
+    if (prev_mode != MODE_EDIT && prev_mode != MODE_EXECUTE) {
         prev_mode = MODE_EDIT;
         ppu_on_all();
         pal_fade_to(0, 4, 4);
     }
     game_mode_edit_main();
+}
+
+void game_mode_execute() {
+    // if (prev_mode != MODE_EDIT) {
+    //     prev_mode = MODE_EDIT;
+    //     ppu_on_all();
+    //     pal_fade_to(0, 4, 4);
+    // }
+
+    // i dare you to inline this llvm-mos. bring it on.
+    game_mode_execute_main();
 }
 
 int main() {
@@ -151,6 +161,22 @@ int main() {
     
     // Turn on the screen, showing both the background and sprites
     // ppu_on_all();
+    
+constexpr uint8_t X_LO_BOUND = (10 * 8);
+constexpr uint8_t Y_LO_BOUND = (22 * 8);
+    auto cursor = cursors[0];
+    cursor.is_moving = false;
+    cursor.x = X_LO_BOUND;
+    cursor.y = Y_LO_BOUND;
+    cursor.height = 16;
+    cursor.width = 16;
+    cursor.param1 = 4;
+
+    auto cmdcursor = cursors[1];
+    cmdcursor.is_moving = false;
+    cmdcursor.param1 = 1;
+    cmdcursor.height = 16;
+    cmdcursor.width = 16;
 
     // Now time to start the main game loop
     while (true) {
@@ -174,10 +200,12 @@ int main() {
             game_mode_edit();
             break;
         case MODE_EXECUTE:
+            game_mode_execute();
             break;
         case MODE_PASSWORD:
-            uint8_t random = rand();
-            level = random;
+        // force the compiler to stop inlining load level
+            // uint8_t random = rand();
+            // level = random;
             game_mode_load_level();
             break;
         }

@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <peekpoke.h>
 #include <soa.h>
 
 #ifdef __cplusplus
@@ -167,7 +168,7 @@ constexpr inline void wrapped_inc(uint8_t& val, uint8_t bound, uint8_t reset = 0
 
 constexpr inline void wrapped_dec(uint8_t& val, uint8_t bound, uint8_t reset = 0) {
     val--;
-    if ((int8_t)val < (int8_t)bound-1) {
+    if ((int8_t)val < (int8_t)bound) {
         val = reset;
     }
 }

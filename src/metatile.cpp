@@ -18,7 +18,7 @@ constexpr soa::Array<Metatile_2_2, METATILE_COUNT> metatiles = {
 };
 
 // Include the VRAM buffer and the VRAM_INDEX so we can write directly into the buffer ourselves.
-extern volatile uint8_t VRAM_BUF[128];
+extern uint8_t VRAM_BUF[128];
 extern volatile __zeropage uint8_t VRAM_INDEX;
 extern volatile __zeropage uint8_t NAME_UPD_ENABLE;
 
@@ -104,17 +104,20 @@ extern "C" void draw_metatile_2_3(Nametable nmt, uint8_t x, uint8_t y, Letter mt
     auto idx = VRAM_INDEX;
     int ppuaddr_left = 0x2000 | (((uint8_t)nmt) << 8) | (((y) << 5) | (x));
     int ppuaddr_right = ppuaddr_left + 1;
+    // address to draw to along with a flag to say is vertical
     VRAM_BUF[idx+ 0] = MSB(ppuaddr_left) | NT_UPD_VERT;
     VRAM_BUF[idx+ 1] = LSB(ppuaddr_left);
     VRAM_BUF[idx+ 6] = MSB(ppuaddr_right) | NT_UPD_VERT;
     VRAM_BUF[idx+ 7] = LSB(ppuaddr_right);
     VRAM_BUF[idx+ 2] = 3;
     VRAM_BUF[idx+ 8] = 3;
+    // left side tile data
     VRAM_BUF[idx+ 3] = LEFT_TILE(tile->top_top);
-    VRAM_BUF[idx+ 9] = RIGHT_TILE(tile->top_top);
     VRAM_BUF[idx+ 4] = LEFT_TILE(tile->top_bot);
-    VRAM_BUF[idx+10] = RIGHT_TILE(tile->top_bot);
     VRAM_BUF[idx+ 5] = LEFT_TILE(tile->bot_top);
+    // right side tile data
+    VRAM_BUF[idx+ 9] = RIGHT_TILE(tile->top_top);
+    VRAM_BUF[idx+10] = RIGHT_TILE(tile->top_bot);
     VRAM_BUF[idx+11] = RIGHT_TILE(tile->bot_top);
     VRAM_BUF[idx+12] = 0xff; // terminator bit
     VRAM_INDEX += 12;

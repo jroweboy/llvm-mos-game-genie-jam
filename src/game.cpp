@@ -1,4 +1,5 @@
 
+#include <string.h>
 #include <cstdint>
 #include "fixed_point2.hpp"
 #include <nesdoug.h>
@@ -8,11 +9,10 @@
 
 #include "game.hpp"
 #include "common.hpp"
+#include "levels.hpp"
 #include "metatile.hpp"
 #include "text_render.hpp"
-
-extern __zp unsigned char SPRID;
-extern char OAM_BUF[256];
+#include "graphics.hpp"
 
 struct LevelCommand {
     uint8_t id;
@@ -37,37 +37,8 @@ uint8_t current_sub;
 
 constinit const uint8_t sub_attr_y_lut[] = { 2, 12, 20 };
 
-
-struct Cursor {
-    fu8_8 x;
-    fu8_8 y;
-    fs8_8 x_vel;
-    fs8_8 y_vel;
-    uint8_t target_x;
-    uint8_t target_y;
-    uint8_t timer;
-    uint8_t param1;
-    uint8_t width;
-    uint8_t height;
-    uint8_t expand_timer;
-    uint8_t expansion;
-    uint8_t prev_expansion;
-    bool expand_direction;
-    bool is_moving;
-};
-
-#define SOA_STRUCT Cursor
-#define SOA_MEMBERS MEMBER(x) MEMBER(y) MEMBER(target_x) MEMBER(target_y) \
-    MEMBER(x_vel) MEMBER(y_vel) MEMBER(timer) MEMBER(param1) MEMBER(width) MEMBER(height) \
-    MEMBER(expand_timer) MEMBER(expansion) MEMBER(prev_expansion) \
-    MEMBER(expand_direction) MEMBER(is_moving)
-#include <soa-struct.inc>
 soa::Array<Cursor, 2> cursors;
 
-
-constinit static uint8_t cursor_expand_timer_lut[] = {
-    12, 10, 8, 6, 6, 6, 8, 10
-};
 
 constinit static const uint8_t command_lower_bound_lut[] = { 0, 12, 12 + 9 };
 constinit static const uint8_t command_upper_bound_lut[] = { 12, 12 + 9, 12 + 9 + 9 };
@@ -127,6 +98,18 @@ const Letter* command_strings[9] = {
     WORD_JMP_2,
 };
 
+const uint8_t command_to_string_lut[9] = {
+    3, // WAIT
+    1, // MOVE
+    0, // TURN LEFT
+    2, // TURN RIGHT
+    5, // PICKUP
+    6, // RETURN
+    7, // JUMP1
+    8, // JUMP2
+    3, // UNUSED WAIT
+};
+
 // uint8_t find_obj_slot(ObjectType t) {
 //     return 1;
 // }
@@ -155,9 +138,12 @@ Coord get_pos_from_index() {
     return t;
 }
 
-void update_sub_attribute() {
+void update_sub_attribute(uint8_t new_val) {
     auto old_sub = current_sub;
-    wrapped_inc(current_sub, 3);
+    if (new_val == 3)
+        wrapped_inc(current_sub, 3);
+    else
+        current_sub = new_val;
     update_attribute(2, sub_attr_y_lut[old_sub], BG_PALETTE_TAN);
     update_attribute(4, sub_attr_y_lut[old_sub], BG_PALETTE_TAN);
     update_attribute(6, sub_attr_y_lut[old_sub], BG_PALETTE_TAN);
@@ -185,121 +171,68 @@ void update_command_list(uint8_t new_command) {
     draw_command();
     wrapped_inc(idx, upper_bound, lower_bound);
 }
-void draw_cursor(uint8_t slot) {
-    auto cursor = cursors[slot];
-    // param1 = longtimer
-    // Run the cursor expando
-    if (game_mode == GameMode::MODE_EDIT) {
-        if (cursor.is_moving) {
-            // if we are moving, contract in slightly
-            // if (cursor_extra.expansion != (uint8_t)-4) {
-            //     cursor_extra.prev_expansion = cursor_extra.expansion;
-            // }
-            // cursor.expansion = 0;
-            // cursor.timer = 0;
-            // cursor.param1 = 4;
-            // cursor.expand_timer = 0;
-            // cursor.expand_direction = false;
-        } else if (cursor.timer == 0) {
-            // if (cursor_extra.expansion == (uint8_t)-4) {
-            //     cursor_extra.expansion = cursor_extra.prev_expansion;
-            // }
-            // other wise grow and shrink over time
-            cursor.expand_timer++;
-            cursor.expand_timer &= 7;
-            cursor.timer = cursor_expand_timer_lut[cursor.expand_timer];
-            cursor.expansion += cursor->expand_direction ? -1 : 1;
-            cursor.param1 = cursor->param1 - 1;
-            if (cursor->param1 == 0) {
-                cursor.param1 = 4;
-                cursor.expand_direction = !cursor->expand_direction;
-            }
-        }
+
+constexpr int8_t minimum_velocity = 1;
+
+void move_object(uint8_t slot) {
+    auto object = objects[slot];
+    if (object->x.as_i() < object->target_x) {
+        object.x = object->x + object->x_vel;
+        if (object->x.as_i() > object->target_x)
+            object.x = object->target_x;
+    } else if (object->x.as_i() > object->target_x) {
+        object.x = object->x + object->x_vel;
+        if (object->x < object->target_x)
+            object.x = object->target_x;
     }
-    // y, tile, attr, x
-    OAM_BUF[SPRID+ 2] = 0x01;
-    OAM_BUF[SPRID+ 6] = 0x01;
-    OAM_BUF[SPRID+10] = 0x01;
-    OAM_BUF[SPRID+14] = 0x01;
-
-    OAM_BUF[SPRID+ 1] = 0x0d;
-    OAM_BUF[SPRID+ 5] = 0x0e;
-    OAM_BUF[SPRID+ 9] = 0x07;
-    OAM_BUF[SPRID+13] = 0x0b;
-    // OAM_BUF[SPRID+ 1] = 0x09;
-    // OAM_BUF[SPRID+13] = 0x09;
-    // OAM_BUF[SPRID+ 5] = 0x06;
-    // OAM_BUF[SPRID+ 9] = 0x06;
-    // top left
-    OAM_BUF[SPRID+ 0] = cursor->y.as_i() - 4 - 1 - cursor->expansion;
-    OAM_BUF[SPRID+ 3] = cursor->x.as_i() - 4 - cursor->expansion;
-    // top right
-    OAM_BUF[SPRID+ 4] = cursor->y.as_i() - 4 - 1 - cursor->expansion;
-    OAM_BUF[SPRID+ 7] = cursor->x.as_i() - 4 + cursor->width + cursor->expansion;
-    // bot left
-    OAM_BUF[SPRID+ 8] = cursor->y.as_i() - 4 - 1 + cursor->height + cursor->expansion;
-    OAM_BUF[SPRID+11] = cursor->x.as_i() - 4 - cursor->expansion;
-    // bot right
-    OAM_BUF[SPRID+12] = cursor->y.as_i() - 4 - 1 + cursor->height + cursor->expansion;
-    OAM_BUF[SPRID+15] = cursor->x.as_i() - 4 + cursor->width + cursor->expansion;
-    SPRID += 16;
+    if (object->y.as_i() < object->target_y) {
+        object.y = object->y + object->y_vel;
+        if (object->y.as_i() > object->target_y)
+            object.y = object->target_y;
+    } else if (object.y->as_i() > object->target_y) {
+        object.y = object->y + object->y_vel;
+        if (object.y->as_i() < object->target_y)
+            object.y = object->target_y;
+    }
+    if (object->x.as_i() == object->target_x && object->y.as_i() == object->target_y) {
+        object.is_moving = false;
+    }
 }
-
-constexpr fs8_8 minimum_velocity = 1.0_s8_8;
 
 void move_cursor(uint8_t slot) {
     auto cursor = cursors[slot];
-    if (cursor->x.as_i() < cursor->target_x) {
+    if (cursor->x < cursor->target_x) {
         cursor.x = cursor->x + cursor->x_vel;
-        if (cursor->x.as_i() > cursor->target_x)
+        if (cursor->x > cursor->target_x)
             cursor.x = cursor->target_x;
-    } else if (cursor->x.as_i() > cursor->target_x) {
+    } else if (cursor->x > cursor->target_x) {
         cursor.x = cursor->x + cursor->x_vel;
         if (cursor->x < cursor->target_x)
             cursor.x = cursor->target_x;
     }
-    if (cursor->y.as_i() < cursor->target_y) {
+    if (cursor->y < cursor->target_y) {
         cursor.y = cursor->y + cursor->y_vel;
-        if (cursor->y.as_i() > cursor->target_y)
+        if (cursor->y > cursor->target_y)
             cursor.y = cursor->target_y;
-    } else if (cursor.y->as_i() > cursor->target_y) {
+    } else if (cursor->y > cursor->target_y) {
         cursor.y = cursor->y + cursor->y_vel;
-        if (cursor.y->as_i() < cursor->target_y)
+        if (cursor->y < cursor->target_y)
             cursor.y = cursor->target_y;
     }
-    if (cursor->x.as_i() == cursor->target_x && cursor->y.as_i() == cursor->target_y) {
+    if (cursor->x == cursor->target_x && cursor->y == cursor->target_y) {
         cursor.is_moving = false;
     }
     
     if (cursor->x_vel < -minimum_velocity*2)
-        cursor.x_vel = (cursor->target_x - cursor->x.as_i()) >> 2;
+        cursor.x_vel = (cursor->target_x - cursor->x) >> 2;
     else if (cursor->x_vel > minimum_velocity*2)
-        cursor.x_vel = (cursor->target_x - cursor->x.as_i()) >> 2;
+        cursor.x_vel = (cursor->target_x - cursor->x) >> 2;
     
     if (cursor->y_vel < -minimum_velocity*2)
-        cursor.y_vel = (cursor->target_y - cursor->y.as_i()) >> 2;
+        cursor.y_vel = (cursor->target_y - cursor->y) >> 2;
     else if (cursor->y_vel >= minimum_velocity*2)
-        cursor.y_vel = (cursor->target_y - cursor->y.as_i()) >> 2;
+        cursor.y_vel = (cursor->target_y - cursor->y) >> 2;
 }
-
-void draw_sprites() {
-    for (uint8_t i=0; i<OBJECT_COUNT; ++i) {
-        auto obj = objects[i];
-        if (obj->timer != 0) {
-            obj.timer--;
-        }
-        switch (obj.type) {
-        case PLAYER:
-            break;
-        case TIMED_WALL:
-        case PACE_ENEMY:
-            break;
-        case NO_OBJECT:
-            break;
-        }
-    }
-}
-
 
 constexpr uint8_t X_LO_BOUND = (10 * 8);
 constexpr uint8_t X_HI_BOUND = (14 * 8);
@@ -308,15 +241,12 @@ constexpr uint8_t Y_AVOID    = (24 * 8);
 constexpr uint8_t Y_LO_BOUND = (22 * 8);
 constexpr uint8_t Y_HI_BOUND = (26 * 8);
 
-static void draw_command_string() {
-    auto cursor = cursors[0];    
-    uint8_t x = (cursor->x.as_i() - X_LO_BOUND) / 16;
-    uint8_t y = (cursor->y.as_i() - Y_LO_BOUND) / 16;
-    uint8_t str = x + y * 3;
-    
+static void clear_command_string(bool halfclear) {
     // Clear the text.. Cheat and only clear the last 3 letters to save time
     auto idx = VRAM_INDEX;
-    int ppuaddr_row0 = 0x2000 | (((uint8_t)Nametable::A) << 8) | ((24) << 5) | (24);
+    int ppuaddr_row0 = (halfclear)
+        ? 0x2000 | (((uint8_t)Nametable::A) << 8) | ((24) << 5) | (24)
+        : 0x2000 | (((uint8_t)Nametable::A) << 8) | ((24) << 5) | (18);
     int ppuaddr_row1 = ppuaddr_row0 + (1 << 5);
     int ppuaddr_row2 = ppuaddr_row1 + (1 << 5);
     VRAM_BUF[idx+ 0] = MSB(ppuaddr_row0) | NT_UPD_HORZ;
@@ -325,16 +255,28 @@ static void draw_command_string() {
     VRAM_BUF[idx+ 1] = LSB(ppuaddr_row0);
     VRAM_BUF[idx+ 5] = LSB(ppuaddr_row1);
     VRAM_BUF[idx+ 9] = LSB(ppuaddr_row2);
-    VRAM_BUF[idx+ 2]  = 6 | NT_UPD_REPT;
-    VRAM_BUF[idx+ 6]  = 6 | NT_UPD_REPT;
-    VRAM_BUF[idx+ 10] = 6 | NT_UPD_REPT;
+    uint8_t length = halfclear ? 6 | NT_UPD_REPT : 12 | NT_UPD_REPT;
+    VRAM_BUF[idx+ 2]  = length;
+    VRAM_BUF[idx+ 6]  = length;
+    VRAM_BUF[idx+ 10] = length;
     VRAM_BUF[idx+ 3] = 0;
     VRAM_BUF[idx+ 7] = 0;
     VRAM_BUF[idx+ 11] = 0;
     VRAM_BUF[idx+ 12] = 0xff;
-
     VRAM_INDEX += 12;
-    render_string(Nametable::A, 18, 24, command_strings[str]);
+}
+
+static void draw_command_string(uint8_t id) {
+    clear_command_string(true);
+    render_string(Nametable::A, 18, 24, command_strings[id]);
+}
+
+static void draw_command_string_main_cursor() {
+    auto cursor = cursors[0];    
+    uint8_t x = (cursor->x - X_LO_BOUND) / 16;
+    uint8_t y = (cursor->y - Y_LO_BOUND) / 16;
+    uint8_t str = x + y * 3;
+    draw_command_string(str);
 }
 
 static void set_cursor_target(uint8_t idx, Coord target) {
@@ -342,8 +284,8 @@ static void set_cursor_target(uint8_t idx, Coord target) {
     cursor.is_moving = true;
     cursor.target_x = target.x;
     cursor.target_y = target.y;
-    cursor.x_vel = (cursor->target_x - cursor->x.as_i()) / 2;
-    cursor.y_vel = (cursor->target_y - cursor->y.as_i()) / 2;
+    cursor.x_vel = (cursor->target_x - cursor->x) / 2;
+    cursor.y_vel = (cursor->target_y - cursor->y) / 2;
 }
 
 static void move_cmd_cursor(uint8_t diff) {
@@ -363,25 +305,25 @@ void game_mode_edit_main() {
     uint8_t write_ptr = 0;
     
     auto cursor = cursors[0];
-    cursor.is_moving = false;
-    cursor.x = X_LO_BOUND;
-    cursor.y = Y_LO_BOUND;
-    cursor.height = 16;
-    cursor.width = 16;
-    cursor.param1 = 4;
+    // cursor.is_moving = false;
+    // cursor.x = X_LO_BOUND;
+    // cursor.y = Y_LO_BOUND;
+    // cursor.height = 16;
+    // cursor.width = 16;
+    // cursor.param1 = 4;
 
     auto cmdcursor = cursors[1];
-    cmdcursor.is_moving = false;
-    cmdcursor.param1 = 1;
-    cmdcursor.height = 16;
-    cmdcursor.width = 16;
-    auto [cmd_x, cmd_y] =get_pos_from_index();
+    // cmdcursor.is_moving = false;
+    // cmdcursor.param1 = 1;
+    // cmdcursor.height = 16;
+    // cmdcursor.width = 16;
+    auto [cmd_x, cmd_y] = get_pos_from_index();
     cmdcursor.x = cmd_x;
     cmdcursor.y = cmd_y;
 
 
     bool prev_is_moving = false;
-    draw_command_string();
+    draw_command_string_main_cursor();
 
     while (true) {
         ppu_wait_nmi();
@@ -435,8 +377,8 @@ void game_mode_edit_main() {
                     // Move the cursor for the selections
                     prev_is_moving = false;
 
-                    uint8_t orig_x = cursor->x.as_i();
-                    uint8_t orig_y = cursor->y.as_i();
+                    uint8_t orig_x = cursor->x;
+                    uint8_t orig_y = cursor->y;
 
                     Coord target = {.x = orig_x, .y = orig_y};
 
@@ -475,8 +417,8 @@ void game_mode_edit_main() {
             }
 
             if (input & PAD_A) {
-                uint8_t x = (cursor->x.as_i() - X_LO_BOUND) / 16;
-                uint8_t y = (cursor->y.as_i() - Y_LO_BOUND) / 16;
+                uint8_t x = (cursor->x - X_LO_BOUND) / 16;
+                uint8_t y = (cursor->y - Y_LO_BOUND) / 16;
                 uint8_t idx = x + y * 3;
                 update_command_list(cursor_command_lut[idx]);
                 auto target = get_pos_from_index();
@@ -490,14 +432,15 @@ void game_mode_edit_main() {
         } else {
             if (prev_is_moving != cursor->is_moving) {
                 prev_is_moving = cursor->is_moving;
-                draw_command_string();
+                draw_command_string_main_cursor();
             }
             move_cursor(0);
         }
 
         if (cmdcursor->is_moving)
             move_cursor(1);
-        draw_sprites();
+
+        draw_player();
         draw_cursor(0);
         draw_cursor(1);
 
@@ -505,4 +448,184 @@ void game_mode_edit_main() {
             cursor.timer--;
         }
     }
+}
+
+constexpr fs8_8 MOVE_SPEED = 0.75_s8_8;
+constinit fs8_8 x_movement_velocity[4] = {
+    0,
+    MOVE_SPEED,
+    0,
+    -MOVE_SPEED,
+};
+constinit fs8_8 y_movement_velocity[4] = {
+    -MOVE_SPEED,
+    0,
+    MOVE_SPEED,
+    0,
+};
+
+constinit int8_t x_movement[4] = {
+    0,
+    16,
+    0,
+    -16,
+};
+constinit int8_t y_movement[4] = {
+    -16,
+    0,
+    16,
+    0,
+};
+
+static void execute_action(uint8_t slot) {
+    // execute the current command
+    auto cmd = commands[command_index[current_sub]];
+    auto obj = objects[slot];
+    switch ((Command)cmd) {
+    case CMD_MOVE: {
+        Coord target;
+        target.x = obj->x.as_i() + 8 + x_movement[obj->facing_dir];
+        target.y = obj->y.as_i() + 8 + y_movement[obj->facing_dir];
+        LevelObjType ttype = load_metatile_at_coord(target.x, target.y);
+        if (ttype == LevelObjType::SOLID_WALL) {
+            break;
+        }
+        obj.x_vel = x_movement_velocity[obj->facing_dir];
+        obj.y_vel = y_movement_velocity[obj->facing_dir];
+        obj.target_x = target.x - 8;
+        obj.target_y = target.y - 8;
+        break;
+    }
+    case CMD_TURN_LEFT: {
+        uint8_t val = obj.facing_dir;
+        wrapped_dec(val, 0, 3);
+        obj.facing_dir = val;
+        break;
+    }
+    case CMD_TURN_RIGHT: {
+        uint8_t val = obj.facing_dir;
+        wrapped_inc(val, 3, 0);
+        obj.facing_dir = val;
+        break;
+    }
+    case CMD_JMP_ONE:
+        current_sub = 1;
+        command_index[1] = 12 - 1;
+        break;
+    case CMD_JMP_TWO:
+        current_sub = 2;
+        command_index[2] = 12 + 9 - 1;
+        break;
+    case CMD_PICKUP: {
+        uint8_t px = obj->x.as_i() + 4;
+        uint8_t py = obj->y.as_i() + 4;
+        LevelObjType ttype = load_metatile_at_coord(px, py);
+        if (ttype == LevelObjType::PICKUP) {
+            pickup_count--;
+            update_level_buff(px >> 3, py >> 3, LevelObjType::EMPTY);
+            draw_metatile_2_2(Nametable::A, px >> 3, py >> 3, Metatile::BLANK);
+        }
+        break;
+    }
+    case CMD_RETURN:
+    case CMD_END:
+    case CMD_WAIT:
+        break;
+    }
+}
+
+void game_mode_execute_main() {
+    auto cmdcursor = cursors[1];
+    cmdcursor.is_moving = true;
+
+    uint8_t original_objs[sizeof(Object) * 8];
+    memcpy(original_objs, (void*)&objects, sizeof(Object) * 8);
+
+    uint8_t original_sub = current_sub;
+    uint8_t original_index[3] = { command_index[0], command_index[1], command_index[2] };
+
+    current_sub = 0;
+    command_index[0] = 0;
+    command_index[1] = 0;
+    command_index[2] = 0;
+
+    // clear_command_string(false);
+    
+    // Move the cursor to the start
+    auto target = get_pos_from_index();
+    set_cursor_target(1, target);
+    while (cmdcursor.is_moving) {
+        ppu_wait_nmi();
+        oam_clear();
+        
+        move_cursor(1);
+        draw_cursor(1);
+        draw_player();
+    }
+
+    clear_command_string(false);
+    delay(60);
+
+    // wait a bit before starting
+    auto id = commands[command_index[current_sub]];
+    draw_command_string(command_to_string_lut[id]);
+
+    // bool just_started = false;
+
+    uint8_t frame_length = 1;
+
+    while (true) {
+        ppu_wait_nmi();
+        pad_poll(0);
+        oam_clear();
+
+        auto input = get_pad_new(0);
+
+        if (input & PAD_START) {
+            break;
+        }
+
+        if (frame_length == 0) {
+            execute_action(0);
+            frame_length = 30;
+            auto id = commands[command_index[current_sub]];
+            draw_command_string(command_to_string_lut[id]);
+
+            // advance to the next command
+            move_cmd_cursor(1);
+            
+            // check if its time to end the run.
+            if (current_sub == 0 && command_index[0] == 0) {
+                // end conditions
+                break;
+            } else if (command_index[current_sub] == command_lower_bound_lut[current_sub]) {
+                // return to main? should be return to prev sub...
+                DEBUGGER();
+                current_sub = 0;
+            }
+            
+            auto target = get_pos_from_index();
+            set_cursor_target(1, target);
+            // just_started = true;
+
+        } else {
+            if (cmdcursor->is_moving) {
+                move_cursor(1);
+            }
+            move_object(0);
+            frame_length--;
+        }
+
+        draw_cursor(1);
+        draw_player();
+    }
+
+
+    current_sub = original_sub;
+    command_index[0] = original_index[0];
+    command_index[1] = original_index[1];
+    command_index[2] = original_index[2];
+
+    memcpy((void*)&objects, original_objs, sizeof(Object) * 8);
+    set_game_mode(MODE_EDIT);
 }

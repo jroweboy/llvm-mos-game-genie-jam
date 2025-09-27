@@ -3,10 +3,11 @@
 #include <stdint.h>
 #include <neslib.h>
 #include "common.hpp"
+#include "text_render.hpp"
 
 enum class LevelObjType : uint8_t {
-    TERMINATOR,
-    FLUSH_VRAM,
+    TERMINATOR = 0,
+    EMPTY = 0,
     SOLID_WALL,
     TIMED_WALL,
     PICKUP,
@@ -24,24 +25,21 @@ enum class Facing : uint8_t {
     Left
 };
 
-// union LevelObjId {
-//     uint8_t raw;
-//     struct {
-//         uint8_t id : 6;
-//         uint8_t multiple : 4;
-//     };
-// };
-
-// union LevelObjLenDir {
-//     uint8_t raw;
-//     struct {
-//         uint8_t len : 6;
-//         uint8_t dir : 2;
-//     };
-// };
-
 void draw_hud(uint8_t level_num);
 void load_level(uint8_t level_num);
+
+extern "C" LevelObjType load_metatile_at_coord(uint8_t x, uint8_t y);
+extern "C" void update_level_buff(uint8_t tile_x, uint8_t tile_y, LevelObjType val);
+
+SPLIT_ARRAY_DEFINE(all_levels);
+SPLIT_ARRAY_DEFINE(level_titles);
+
+extern const uint8_t LEVEL_FREEBIE[];
+extern const uint8_t LEVEL_ZIGZAG[];
+
+extern const Letter* LEVEL_TITLE_FREEBIE;
+extern const Letter* LEVEL_TITLE_ZIGZAG;
+
 
 constexpr uint8_t L_MULTIPLE = 1 << 7;
 constexpr uint8_t L_HORIZONTAL = 0;
@@ -52,7 +50,7 @@ constexpr uint8_t L_FACING_DOWN = 0b10 << 6;
 constexpr uint8_t L_FACING_LEFT = 0b11 << 6;
 
 #define L_POS(x, y) static_cast<uint8_t>(((x) & 0xf) << 4 | ((y) & 0xf))
-#define L_FACE(id, facing) static_cast<uint8_t>(static_cast<uint8_t>((id)) | static_cast<uint8_t>(facing))
+#define L_FACE(id, facing) static_cast<uint8_t>(static_cast<uint8_t>((id)) | static_cast<uint8_t>(facing) << 6)
 
 #define L_ONE(id, x, y)                              \
     static_cast<uint8_t>(static_cast<uint8_t>((id))),\
@@ -136,8 +134,3 @@ constexpr uint8_t L_FACING_LEFT = 0b11 << 6;
 #define A_HORZ(len, x, y, ...) \
     A_MANY_HEADER((len), NT_UPD_HORZ, x, y), \
     FOR_EACH(NOP, __VA_ARGS__)
-
-SPLIT_ARRAY_DEFINE(all_levels);
-
-extern const uint8_t LEVEL_0[];
-extern const uint8_t LEVEL_1[];
