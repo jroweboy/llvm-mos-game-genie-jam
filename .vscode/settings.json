@@ -18,7 +18,7 @@
     "clangd.arguments": [
         "--query-driver=*\\build\\_deps\\llvm-mos-sdk-src\\bin\\*clang*"
     ],
-    "clangd.path": "${workspaceFolder}\\build\\_deps\\llvm-mos-sdk-src\\bin\\clangd.exe",
+    "clangd.path": "${workspaceFolder}/build/_deps/llvm-mos-sdk-src/bin/clangd",
     "clangd.detectExtensionConflicts": true,
     "files.associations": {
         "*.c": "c",

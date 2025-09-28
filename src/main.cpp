@@ -58,25 +58,39 @@ constexpr uint8_t DRAW_CURSOR = 2;
 extern const uint8_t title_screen_0[] = {
     DRAW_STRING, 3, 6, LETTERS_13("STEP BY STEP"),
     DRAW_STRING, 3, 9, LETTERS_12("BY JROWEBOY"),
-    DRAW_STRING, 3, 14, LETTERS_11("PRESS DOWN"),
-    DRAW_STRING, 3, 17, LETTERS_11("FOR MANUAL"),
-    DRAW_PLAYER_DOWN, 13 * 8, 22 * 8,
+    // DRAW_STRING, 8, 12, LETTERS_7("HEYDON"),
+    DRAW_STRING, 3, 17, LETTERS_11("PRESS DOWN"),
+    DRAW_STRING, 3, 20, LETTERS_11("FOR MANUAL"),
+    DRAW_PLAYER_DOWN, 13 * 8, 24 * 8,
     DRAW_END
 };
 extern const uint8_t title_screen_1[] = {
     DRAW_STRING, 2, 6, LETTERS_16("GUIDE THE ARROW"),
-    DRAW_STRING, 2, 14, LETTERS_15("TO EACH PICKUP"),
-    DRAW_STRING, 2, 22, LETTERS_13("IN THE LEVEL"),
     DRAW_PLAYER_DOWN, 14 * 8, 10 * 8,
+    DRAW_STRING, 2, 14, LETTERS_15("TO ALL PICKUPS"),
     M_ONE(14, 18, Metatile::ITEM),
     A_HORZ(1, 14, 18, A_BL(BG_PALETTE_GREEN)),
+    DRAW_STRING, 2, 22, LETTERS_13("IN THE LEVEL"),
     DRAW_CURSOR, 14 * 8, 18 * 8,
     DRAW_END
 };
+extern const uint8_t title_screen_2[] = {
+    DRAW_STRING, 2, 3, LETTERS_16("ADD COMMANDS TO"),
+    DRAW_STRING, 2, 6, LETTERS_9("THE LIST"),
+    M_HORZ(3, 10, 10, Metatile::SEPARATOR, Metatile::SUB, Metatile::SEPARATOR),
+    A_HORZ(2, 10, 10, A_BL(BG_PALETTE_BLUE), A_BL(BG_PALETTE_BLUE) | A_BR(BG_PALETTE_BLUE)),
+    DRAW_STRING, 2, 13, LETTERS_13("AND RUN THEM"),
+    DRAW_STRING, 2, 16, LETTERS_11("WITH START"),
+    A_HORZ(2, 14, 18, 0xff, 0xff), // BG_PALETTE_GREEN
+    DRAW_PLAYER_DOWN, 13 * 8, 24 * 8,
+    DRAW_END
+};
 
+constexpr uint8_t TITLE_SCREEN_COUNT = 2;
 SPLIT_ARRAY(title_screen_data,
     title_screen_0,
-    title_screen_1
+    title_screen_1,
+    title_screen_2
 );
 
 void draw_title_screen(uint8_t idx) {
@@ -166,7 +180,7 @@ void game_mode_title() {
         }
 
         if (input & PAD_DOWN) {
-            current_screen = MMIN(current_screen+1, 1);
+            current_screen = MMIN(current_screen+1, TITLE_SCREEN_COUNT);
         } else if (input & PAD_UP) {
             current_screen = MMAX(current_screen-1, 0);
         }

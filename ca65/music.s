@@ -29,7 +29,7 @@ run_sabre_driver:
     jsr sabre_soundUpdate
 
 .segment "_ptext_psabre__music"
-.include "bpe_final_static.inc"
-.include "bpe_final_default.inc"
+.include "bpe_loong_long_music_static.inc"
+.include "bpe_loong_long_music_default.inc"
 .segment "_ptext_psabre__driver"
 .include "sabre.inc"

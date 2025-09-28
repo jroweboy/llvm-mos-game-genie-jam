@@ -11,7 +11,11 @@ if(LLVM_MOS_BOOTSTRAP_SDK
   AND NOT LLVM_MOS_ASM_COMPILER)
 
   if(NOT LLVM_MOS_PRECOMPILED_SDK)
-    string(TOLOWER ${CMAKE_HOST_SYSTEM_NAME} _cmake_host_system_name_lowercase)
+    set(LLVM_MOS_SYSTEM_NAME ${CMAKE_HOST_SYSTEM_NAME})
+    if(LLVM_MOS_SYSTEM_NAME STREQUAL "Darwin")
+      set(LLVM_MOS_SYSTEM_NAME "macos")
+    endif()
+    string(TOLOWER ${LLVM_MOS_SYSTEM_NAME} _cmake_host_system_name_lowercase)
     set(LLVM_MOS_PRECOMPILED_SDK llvm-mos-${_cmake_host_system_name_lowercase}
             CACHE STRING "The name of the llvm-mos release to download for precompiled tools")
   endif()
