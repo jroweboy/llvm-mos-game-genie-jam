@@ -47,6 +47,52 @@ void draw_letter(Nametable nmt, uint8_t x, uint8_t y, Letter letter);
  */
 void render_string(Nametable nmt, uint8_t x, uint8_t y, const Letter letter[]);
 
+// Character access macro
+#define CHAR_AT(str, n) (LetterArray(str).out[n])
+
+// Recursive expansion macros for different string lengths
+#define EXPAND_CHARS_1(str) CHAR_AT(str, 0)
+#define EXPAND_CHARS_2(str) EXPAND_CHARS_1(str), CHAR_AT(str, 1)
+#define EXPAND_CHARS_3(str) EXPAND_CHARS_2(str), CHAR_AT(str, 2)
+#define EXPAND_CHARS_4(str) EXPAND_CHARS_3(str), CHAR_AT(str, 3)
+#define EXPAND_CHARS_5(str) EXPAND_CHARS_4(str), CHAR_AT(str, 4)
+#define EXPAND_CHARS_6(str) EXPAND_CHARS_5(str), CHAR_AT(str, 5)
+#define EXPAND_CHARS_7(str) EXPAND_CHARS_6(str), CHAR_AT(str, 6)
+#define EXPAND_CHARS_8(str) EXPAND_CHARS_7(str), CHAR_AT(str, 7)
+#define EXPAND_CHARS_9(str) EXPAND_CHARS_8(str), CHAR_AT(str, 8)
+#define EXPAND_CHARS_10(str) EXPAND_CHARS_9(str), CHAR_AT(str, 9)
+#define EXPAND_CHARS_11(str) EXPAND_CHARS_10(str), CHAR_AT(str, 10)
+#define EXPAND_CHARS_12(str) EXPAND_CHARS_11(str), CHAR_AT(str, 11)
+#define EXPAND_CHARS_13(str) EXPAND_CHARS_12(str), CHAR_AT(str, 12)
+#define EXPAND_CHARS_14(str) EXPAND_CHARS_13(str), CHAR_AT(str, 13)
+#define EXPAND_CHARS_15(str) EXPAND_CHARS_14(str), CHAR_AT(str, 14)
+#define EXPAND_CHARS_16(str) EXPAND_CHARS_15(str), CHAR_AT(str, 15)
+#define EXPAND_CHARS_17(str) EXPAND_CHARS_16(str), CHAR_AT(str, 16)
+#define EXPAND_CHARS_18(str) EXPAND_CHARS_17(str), CHAR_AT(str, 17)
+#define EXPAND_CHARS_19(str) EXPAND_CHARS_18(str), CHAR_AT(str, 18)
+#define EXPAND_CHARS_20(str) EXPAND_CHARS_19(str), CHAR_AT(str, 19)
+
+// Convenience macros for common lengths
+#define LETTERS_1(str) EXPAND_CHARS_1(str)
+#define LETTERS_2(str) EXPAND_CHARS_2(str)
+#define LETTERS_3(str) EXPAND_CHARS_3(str)
+#define LETTERS_4(str) EXPAND_CHARS_4(str)
+#define LETTERS_5(str) EXPAND_CHARS_5(str)
+#define LETTERS_6(str) EXPAND_CHARS_6(str)
+#define LETTERS_7(str) EXPAND_CHARS_7(str)
+#define LETTERS_8(str) EXPAND_CHARS_8(str)
+#define LETTERS_9(str) EXPAND_CHARS_9(str)
+#define LETTERS_10(str) EXPAND_CHARS_10(str)
+#define LETTERS_11(str) EXPAND_CHARS_11(str)
+#define LETTERS_12(str) EXPAND_CHARS_12(str)
+#define LETTERS_13(str) EXPAND_CHARS_13(str)
+#define LETTERS_14(str) EXPAND_CHARS_14(str)
+#define LETTERS_15(str) EXPAND_CHARS_15(str)
+#define LETTERS_16(str) EXPAND_CHARS_16(str)
+#define LETTERS_17(str) EXPAND_CHARS_17(str)
+#define LETTERS_18(str) EXPAND_CHARS_18(str)
+
+
 #ifdef __cplusplus
 }
 #endif
@@ -82,4 +128,6 @@ template<LetterArray A>
 consteval auto operator""_l() {
     return A.out;
 }
+
+
 #endif

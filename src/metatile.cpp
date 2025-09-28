@@ -17,11 +17,6 @@ constexpr soa::Array<Metatile_2_2, METATILE_COUNT> metatiles = {
     #include "metatile_graphics.inc"
 };
 
-// Include the VRAM buffer and the VRAM_INDEX so we can write directly into the buffer ourselves.
-extern uint8_t VRAM_BUF[128];
-extern volatile __zeropage uint8_t VRAM_INDEX;
-extern volatile __zeropage uint8_t NAME_UPD_ENABLE;
-
 
 uint8_t attribute_buffer[0x40];
 

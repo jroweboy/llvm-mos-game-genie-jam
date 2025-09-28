@@ -15,10 +15,7 @@
     Font definitions
 */
 
-// Include the VRAM buffer and the VRAM_INDEX so we can write directly into the buffer ourselves.
-extern volatile uint8_t VRAM_BUF[128];
-extern volatile __zeropage uint8_t VRAM_INDEX;
-extern volatile __zeropage uint8_t NAME_UPD_ENABLE;
+extern __zeropage uint8_t NAME_UPD_ENABLE;
 
 extern "C" void render_string(Nametable nmt, uint8_t x, uint8_t y, const Letter str[]) {
     uint8_t len = (uint8_t)str[0];

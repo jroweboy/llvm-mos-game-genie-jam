@@ -5,7 +5,6 @@
 #include <soa.h>
 
 #include "common.hpp"
-#include "levels.hpp"
 
 using namespace fixedpoint_literals;
 
@@ -62,10 +61,6 @@ extern soa::Array<Object, 8> objects;
 
 
 struct Cursor {
-    // fu8_8 x;
-    // fu8_8 y;
-    // fs8_8 x_vel;
-    // fs8_8 y_vel;
     uint8_t x;
     uint8_t y;
     int8_t x_vel;

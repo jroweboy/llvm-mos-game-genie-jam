@@ -145,4 +145,10 @@ R"(
 |  x |
 | x x|
 )"_mt_2_2,
-
+/* PORTAL */
+R"(
+|oooo|
+|oooo|
+|oooo|
+|oooo|
+)"_mt_2_2,

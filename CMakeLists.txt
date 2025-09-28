@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.20)
 
 # Change this line to change the name of the ROM
-set(PROJECT_NAME gg-llvm-mos-sample)
+set(PROJECT_NAME step_by_step)
 
 set(CMAKE_EXECUTABLE_SUFFIX_CXX ".nes")
 
@@ -47,7 +47,7 @@ target_link_options(${CMAKE_PROJECT_NAME} PRIVATE
     -Wno-error=unused-command-line-argument
     # !! NOTICE !! If you reserve any ZEROPAGE variables in ca65, then you need to calculate how much ZP its using and
     # update this value with the total number of bytes of ZP that your ca65 code uses.
-    -mreserve-zp=0
+    -mreserve-zp=42
 
     # make functions non-recursive by default
     -fnonreentrant

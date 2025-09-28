@@ -10,7 +10,6 @@
 #include "metatile.hpp"
 #include "levels.hpp"
 
-extern volatile __zeropage uint8_t VRAM_INDEX;
 
 // static const uint8_t* __zp current_level;
 static uint8_t level_offset;

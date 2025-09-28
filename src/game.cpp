@@ -27,9 +27,6 @@ struct LevelCommand {
 #define OBJECT_COUNT 8
 soa::Array<Object, OBJECT_COUNT> objects;
 
-extern volatile uint8_t VRAM_BUF[128];
-extern volatile __zeropage uint8_t VRAM_INDEX;
-
 uint8_t commands[12 + 9 + 9];
 uint8_t command_index[3];
 uint8_t current_sub;
@@ -461,6 +458,7 @@ void game_mode_edit_main() {
 }
 
 constexpr fs8_8 MOVE_SPEED = 0.75_s8_8;
+constexpr fs8_8 TWOX_MOVE_SPEED = 0.75_s8_8;
 constinit FIXED const fs8_8 x_movement_velocity[4] = {
     0,
     MOVE_SPEED,
@@ -471,6 +469,18 @@ constinit FIXED const fs8_8 y_movement_velocity[4] = {
     -MOVE_SPEED,
     0,
     MOVE_SPEED,
+    0,
+};
+constinit FIXED const fs8_8 twox_movement_velocity[4] = {
+    0,
+    TWOX_MOVE_SPEED,
+    0,
+    -TWOX_MOVE_SPEED,
+};
+constinit FIXED const fs8_8 twoy_movement_velocity[4] = {
+    -TWOX_MOVE_SPEED,
+    0,
+    TWOX_MOVE_SPEED,
     0,
 };
 
@@ -500,8 +510,12 @@ static void execute_action(uint8_t slot) {
         if (ttype == LevelObjType::SOLID_WALL) {
             break;
         }
-        obj.x_vel = x_movement_velocity[obj->facing_dir];
-        obj.y_vel = y_movement_velocity[obj->facing_dir];
+        obj.x_vel = (is_twox_speed)
+            ? twox_movement_velocity[obj->facing_dir]
+            : x_movement_velocity[obj->facing_dir];
+        obj.y_vel = (is_twox_speed)
+            ? twoy_movement_velocity[obj->facing_dir]
+            : y_movement_velocity[obj->facing_dir];
         obj.target_x = target.x - 8;
         obj.target_y = target.y - 8;
         break;

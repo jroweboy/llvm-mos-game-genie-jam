@@ -42,6 +42,7 @@ enum Metatile {
     BORDER_BR_CORNER,
     SEPARATOR,
     SMALL_X,
+    PORTAL,
     METATILE_COUNT,
 };
 
@@ -119,6 +120,11 @@ extern uint8_t level;
 extern GameMode game_mode;
 
 void set_game_mode(GameMode game_mode);
+
+
+
+extern uint8_t VRAM_BUF[128];
+extern uint8_t VRAM_INDEX;
 
 #define _DEBUGGER_0() { POKE(0x4018, 0); }
 #define _DEBUGGER_1(a) { POKE(0x4018, (uint8_t)a); }
@@ -216,8 +222,6 @@ constexpr inline void wrapped_dec(uint8_t& val, uint8_t bound, uint8_t reset = 0
         APPLY_10, APPLY_9, APPLY_8, APPLY_7, APPLY_6, \
         APPLY_5, APPLY_4, APPLY_3, APPLY_2, APPLY_1)(macro, __VA_ARGS__)
 
-
-
 #define COMBINE_1(macro, a) macro(a)
 #define COMBINE_2(macro, a, ...) macro(a) COMBINE_1(macro, __VA_ARGS__)
 #define COMBINE_3(macro, a, ...) macro(a) COMBINE_2(macro, __VA_ARGS__)
@@ -243,10 +247,11 @@ constexpr inline void wrapped_dec(uint8_t& val, uint8_t bound, uint8_t reset = 0
         COMBINE_10, COMBINE_9, COMBINE_8, COMBINE_7, COMBINE_6, \
         COMBINE_5, COMBINE_4, COMBINE_3, COMBINE_2, COMBINE_1)(macro, __VA_ARGS__)
 
+#define DEFINE_EXTERN(n) extern const uint8_t n[]; 
 #define SPLIT_ARRAY_LO_BYTE(n) ".byte " #n "@mos16lo\n"
 #define SPLIT_ARRAY_HI_BYTE(n) ".byte " #n "@mos16hi\n"
 
-#define SPLIT_ARRAY_DEFINE(name) \
+#define SPLIT_ARRAY_DEFINE(name, ...) \
     extern const unsigned char name##_lo_table[]; \
     extern const unsigned char name##_hi_table[];
 
@@ -259,7 +264,7 @@ constexpr inline void wrapped_dec(uint8_t& val, uint8_t bound, uint8_t reset = 0
     );
 
 #define SPLIT_ARRAY(name, ...)\
-    SPLIT_ARRAY_DEFINE(name)\
+    SPLIT_ARRAY_DEFINE(name, __VA_ARGS__)\
     SPLIT_ARRAY_IMPL(name, __VA_ARGS__)
 
 #define SPLIT_ARRAY_POINTER(name, idx) \
