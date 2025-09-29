@@ -30,11 +30,11 @@ void timed_wall_change_color(uint8_t slot, uint8_t pal) {
     auto len = (uint8_t)(lendir & ~(L_VERTICAL));
     if (lendir & L_VERTICAL)
         for (uint8_t i = 0; i < len; ++i) {
-            update_attribute(obj->x.as_i(), obj->y.as_i() + i * 2, pal);
+            update_attribute(obj->x, obj->y + i * 2, pal);
         }
     else
         for (uint8_t i = 0; i < len; ++i) {
-            update_attribute(obj->x.as_i() + i * 2, obj->y.as_i(), pal);
+            update_attribute(obj->x + i * 2, obj->y, pal);
         }
 }
 

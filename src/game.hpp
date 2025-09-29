@@ -26,14 +26,14 @@ struct PlayerExtra {
 
 struct Object {
     ObjectType type;
-    fu8_8 x;
-    fu8_8 y;
-    fs8_8 x_vel;
-    fs8_8 y_vel;
-    // uint8_t x;
-    // uint8_t y;
-    // int8_t x_vel;
-    // int8_t y_vel;
+    // fu8_8 x;
+    // fu8_8 y;
+    // fs8_8 x_vel;
+    // fs8_8 y_vel;
+    uint8_t x;
+    uint8_t y;
+    int8_t x_vel;
+    int8_t y_vel;
     uint8_t target_x;
     uint8_t target_y;
     uint8_t state; /// height for cursor

@@ -69,7 +69,7 @@ void draw_player() {
     auto player = objects[0];
     // param1 == facing dir
     auto mspr = (uint8_t*)SPLIT_ARRAY_POINTER(player_msprite, player->facing_dir);
-    oam_meta_spr(player->x.as_i(), player->y.as_i(), mspr);
+    oam_meta_spr(player->x, player->y, mspr);
 }
 
 constinit FIXED static const uint8_t cursor_expand_timer_lut[] = {
@@ -100,17 +100,17 @@ void draw_cursor(uint8_t slot) {
     OAM_BUF[SPRID+ 9] = 0x07;
     OAM_BUF[SPRID+13] = 0x0b;
     // top left
-    OAM_BUF[SPRID+ 0] = cursor->y.as_i() - 4 - 1 - cursor->param2;
-    OAM_BUF[SPRID+ 3] = cursor->x.as_i() - 4 - cursor->param2;
+    OAM_BUF[SPRID+ 0] = cursor->y - 4 - 1 - cursor->param2;
+    OAM_BUF[SPRID+ 3] = cursor->x - 4 - cursor->param2;
     // top right
-    OAM_BUF[SPRID+ 4] = cursor->y.as_i() - 4 - 1 - cursor->param2;
-    OAM_BUF[SPRID+ 7] = cursor->x.as_i() - 4 + cursor->anim_state + cursor->param2;
+    OAM_BUF[SPRID+ 4] = cursor->y - 4 - 1 - cursor->param2;
+    OAM_BUF[SPRID+ 7] = cursor->x - 4 + cursor->anim_state + cursor->param2;
     // bot left
-    OAM_BUF[SPRID+ 8] = cursor->y.as_i() - 4 - 1 + cursor->state + cursor->param2;
-    OAM_BUF[SPRID+11] = cursor->x.as_i() - 4 - cursor->param2;
+    OAM_BUF[SPRID+ 8] = cursor->y - 4 - 1 + cursor->state + cursor->param2;
+    OAM_BUF[SPRID+11] = cursor->x - 4 - cursor->param2;
     // bot right
-    OAM_BUF[SPRID+12] = cursor->y.as_i() - 4 - 1 + cursor->state + cursor->param2;
-    OAM_BUF[SPRID+15] = cursor->x.as_i() - 4 + cursor->anim_state + cursor->param2;
+    OAM_BUF[SPRID+12] = cursor->y - 4 - 1 + cursor->state + cursor->param2;
+    OAM_BUF[SPRID+15] = cursor->x - 4 + cursor->anim_state + cursor->param2;
     SPRID += 16;
 }
 

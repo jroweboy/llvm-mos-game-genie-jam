@@ -368,20 +368,20 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
             }
             if (input & PAD_A) {
                 input_password[input_position++] = cursor_selected;
-                uint8_t x = inputcursor->x.as_i() >> 3;
-                uint8_t y = inputcursor->y.as_i() >> 3;
+                uint8_t x = inputcursor->x >> 3;
+                uint8_t y = inputcursor->y >> 3;
                 draw_metatile_2_3(Nametable::A, x, y, password_alphabet[cursor_selected]);
-                x = inputcursor->x.as_i();
+                x = inputcursor->x;
                 wrapped_add(x, 16, 160, 176 + 16*3);
-                set_cursor_target(SLOT_CMDCURSOR, Coord{ .x = x, .y= inputcursor->y.as_i()});
+                set_cursor_target(SLOT_CMDCURSOR, Coord{ .x = x, .y= inputcursor->y});
             }
             if (input & PAD_B) {
-                uint8_t x = inputcursor->x.as_i();
+                uint8_t x = inputcursor->x;
                 wrapped_sub(x, 16, 176, 176 + 16*4);
-                set_cursor_target(SLOT_CMDCURSOR, Coord{ .x = x, .y= inputcursor->y.as_i()});
+                set_cursor_target(SLOT_CMDCURSOR, Coord{ .x = x, .y= inputcursor->y});
             }
-            uint8_t cursor_x = cursor->x.as_i();
-            uint8_t cursor_y = cursor->y.as_i();
+            uint8_t cursor_x = cursor->x;
+            uint8_t cursor_y = cursor->y;
             if (input & PAD_LEFT) {
                 wrapped_sub(cursor_x, 16, 24, 152);
             } else if (input & PAD_RIGHT) {

@@ -178,38 +178,38 @@ constexpr int8_t maximum_velocity = 8;
 
 void move_object(uint8_t slot) {
     auto object = objects[slot];
-    if (object->x.as_i() < object->target_x) {
+    if (object->x < object->target_x) {
         object.x = object->x + object->x_vel;
-        if (object->x.as_i() > object->target_x)
+        if (object->x > object->target_x)
             object.x = object->target_x;
-    } else if (object->x.as_i() > object->target_x) {
+    } else if (object->x > object->target_x) {
         object.x = object->x + object->x_vel;
         if (object->x < object->target_x)
             object.x = object->target_x;
     }
-    if (object->y.as_i() < object->target_y) {
+    if (object->y < object->target_y) {
         object.y = object->y + object->y_vel;
-        if (object->y.as_i() > object->target_y)
+        if (object->y > object->target_y)
             object.y = object->target_y;
-    } else if (object.y->as_i() > object->target_y) {
+    } else if (object->y > object->target_y) {
         object.y = object->y + object->y_vel;
-        if (object.y->as_i() < object->target_y)
+        if (object->y < object->target_y)
             object.y = object->target_y;
     }
-    if (object->x.as_i() == object->target_x && object->y.as_i() == object->target_y) {
+    if (object->x == object->target_x && object->y == object->target_y) {
         object.is_moving = false;
     }
 
     if (object->type == CURSOR) {
-        if (object->x_vel.as_i() < -minimum_velocity)
-            object.x_vel = MMAX((object->target_x - object->x.as_i()) >> 2, -maximum_velocity);
+        if (object->x_vel < -minimum_velocity)
+            object.x_vel = MMAX((object->target_x - object->x) >> 2, -maximum_velocity);
         else if (object->x_vel > minimum_velocity)
-            object.x_vel = MMIN((object->target_x - object->x.as_i()) >> 2, maximum_velocity);
+            object.x_vel = MMIN((object->target_x - object->x) >> 2, maximum_velocity);
         
-        if (object->y_vel.as_i() < -minimum_velocity)
-            object.y_vel = MMAX((object->target_y - object->y.as_i()) >> 2, -maximum_velocity);
-        else if (object->y_vel.as_i() >= minimum_velocity)
-            object.y_vel = MMIN((object->target_y - object->y.as_i()) >> 2, maximum_velocity);
+        if (object->y_vel < -minimum_velocity)
+            object.y_vel = MMAX((object->target_y - object->y) >> 2, -maximum_velocity);
+        else if (object->y_vel >= minimum_velocity)
+            object.y_vel = MMIN((object->target_y - object->y) >> 2, maximum_velocity);
     }
 }
 
@@ -288,8 +288,8 @@ static void draw_command_string(uint8_t id) {
 
 static void draw_command_string_main_cursor() {
     auto cursor = objects[1];
-    uint8_t x = (cursor->x.as_i() - X_LO_BOUND) / 16;
-    uint8_t y = (cursor->y.as_i() - Y_LO_BOUND) / 16;
+    uint8_t x = (cursor->x - X_LO_BOUND) / 16;
+    uint8_t y = (cursor->y - Y_LO_BOUND) / 16;
     uint8_t str = x + y * 3;
     draw_command_string(str);
 }
@@ -299,16 +299,16 @@ void set_cursor_target(uint8_t idx, Coord target) {
     cursor.is_moving = true;
     cursor.target_x = target.x;
     cursor.target_y = target.y;
-    cursor.x_vel = (cursor->target_x - cursor->x.as_i()) / 2;
-    cursor.y_vel = (cursor->target_y - cursor->y.as_i()) / 2;
-    if (cursor->x_vel.as_i() < 0)
-        cursor.x_vel = MMIN(cursor->x_vel.as_i(), -maximum_velocity);
+    cursor.x_vel = (cursor->target_x - cursor->x) / 2;
+    cursor.y_vel = (cursor->target_y - cursor->y) / 2;
+    if (cursor->x_vel < 0)
+        cursor.x_vel = MMIN(cursor->x_vel, -maximum_velocity);
     else
-        cursor.x_vel = MMAX(cursor->x_vel.as_i(), maximum_velocity);
-    if (cursor->y_vel.as_i() < 0)
-        cursor.y_vel = MMIN(cursor->y_vel.as_i(), -maximum_velocity);
+        cursor.x_vel = MMAX(cursor->x_vel, maximum_velocity);
+    if (cursor->y_vel < 0)
+        cursor.y_vel = MMIN(cursor->y_vel, -maximum_velocity);
     else
-        cursor.y_vel = MMAX(cursor->y_vel.as_i(), maximum_velocity);
+        cursor.y_vel = MMAX(cursor->y_vel, maximum_velocity);
 }
 
 static void move_cmd_cursor(uint8_t diff) {
@@ -400,8 +400,8 @@ void game_mode_edit_main() {
                     // Move the cursor for the selections
                     prev_is_moving = false;
 
-                    uint8_t orig_x = cursor->x.as_i();
-                    uint8_t orig_y = cursor->y.as_i();
+                    uint8_t orig_x = cursor->x;
+                    uint8_t orig_y = cursor->y;
 
                     Coord target = {.x = orig_x, .y = orig_y};
 
@@ -440,8 +440,8 @@ void game_mode_edit_main() {
             }
 
             if (input & PAD_A) {
-                uint8_t x = (cursor->x.as_i() - X_LO_BOUND) / 16;
-                uint8_t y = (cursor->y.as_i() - Y_LO_BOUND) / 16;
+                uint8_t x = (cursor->x - X_LO_BOUND) / 16;
+                uint8_t y = (cursor->y - Y_LO_BOUND) / 16;
                 uint8_t idx = x + y * 3;
                 update_command_list(cursor_command_lut[idx]);
                 auto target = get_pos_from_index();
@@ -473,27 +473,27 @@ void game_mode_edit_main() {
     }
 }
 
-constexpr fs8_8 MOVE_SPEED = 0.75_s8_8;
-constexpr fs8_8 TWOX_MOVE_SPEED = 1.5_s8_8;
-constinit FIXED const fs8_8 x_movement_velocity[4] = {
+constexpr int8_t MOVE_SPEED = 1;
+constexpr int8_t TWOX_MOVE_SPEED = 2;
+constinit FIXED const int8_t x_movement_velocity[4] = {
     0,
     MOVE_SPEED,
     0,
     -MOVE_SPEED,
 };
-constinit FIXED const fs8_8 y_movement_velocity[4] = {
+constinit FIXED const int8_t y_movement_velocity[4] = {
     -MOVE_SPEED,
     0,
     MOVE_SPEED,
     0,
 };
-constinit FIXED const fs8_8 twox_movement_velocity[4] = {
+constinit FIXED const int8_t twox_movement_velocity[4] = {
     0,
     TWOX_MOVE_SPEED,
     0,
     -TWOX_MOVE_SPEED,
 };
-constinit FIXED const fs8_8 twoy_movement_velocity[4] = {
+constinit FIXED const int8_t twoy_movement_velocity[4] = {
     -TWOX_MOVE_SPEED,
     0,
     TWOX_MOVE_SPEED,
@@ -523,8 +523,8 @@ static bool execute_action(uint8_t slot) {
     switch ((Command)cmd) {
     case CMD_MOVE: {
         Coord target;
-        target.x = obj->x.as_i() + 8 + x_movement[obj->facing_dir];
-        target.y = obj->y.as_i() + 8 + y_movement[obj->facing_dir];
+        target.x = obj->x + 8 + x_movement[obj->facing_dir];
+        target.y = obj->y + 8 + y_movement[obj->facing_dir];
         if (target.x < 80 || target.x > 240 || target.y < 16 || target.y > 160) {
             // stay in bounds!
             break;
@@ -574,8 +574,8 @@ static bool execute_action(uint8_t slot) {
         break;
     }
     case CMD_PICKUP: {
-        uint8_t px = obj->x.as_i() + 4;
-        uint8_t py = obj->y.as_i() + 4;
+        uint8_t px = obj->x + 4;
+        uint8_t py = obj->y + 4;
         LevelObjType ttype = load_metatile_at_coord(px, py);
         if (ttype == LevelObjType::PICKUP) {
             pickup_count--;
