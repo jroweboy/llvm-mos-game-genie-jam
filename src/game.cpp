@@ -29,8 +29,9 @@ soa::Array<Object, OBJECT_COUNT> objects;
 
 uint8_t commands[12 + 9 + 9];
 uint8_t command_index[3];
+uint8_t pickup_list[8];
 uint8_t current_sub;
-static bool is_twox_speed;
+bool is_twox_speed;
 
 
 constinit FIXED const uint8_t sub_attr_y_lut[] = { 2, 12, 20 };
@@ -76,15 +77,16 @@ constinit FIXED const uint8_t command_attr_lut[9] = {
     BG_PALETTE_RED, // Metatile::WAIT, // unused
 };
 
-constinit const Letter* WORD_TURN_LEFT = "TURN L"_l;
-constinit const Letter* WORD_MOVE = "MOVE"_l;
-constinit const Letter* WORD_TURN_RIGHT = "TURN R"_l;
-constinit const Letter* WORD_WAIT = "WAIT"_l;
-constinit const Letter* WORD_PICKUP = "GRAB"_l;
-constinit const Letter* WORD_RETURN = "YIELD"_l;
-constinit const Letter* WORD_JMP_1 = "GOTO 1"_l;
-constinit const Letter* WORD_JMP_2 = "GOTO 2"_l;
-const Letter* command_strings[9] = {
+extern const Letter WORD_TURN_LEFT[] = { LETTERS_7( "TURN L" ) };
+extern const Letter WORD_MOVE[] = { LETTERS_5( "MOVE" ) };
+extern const Letter WORD_TURN_RIGHT[] = { LETTERS_7( "TURN R" ) };
+extern const Letter WORD_WAIT[] = { LETTERS_5( "WAIT" ) };
+extern const Letter WORD_PICKUP[] = { LETTERS_5( "GRAB" ) };
+extern const Letter WORD_RETURN[] = { LETTERS_6( "SPEED" ) };
+extern const Letter WORD_JMP_1[] = { LETTERS_7( "CALL 1" ) };
+extern const Letter WORD_JMP_2[] = { LETTERS_7( "CALL 2" ) };
+
+SPLIT_ARRAY(command_strings,
     WORD_TURN_LEFT,
     WORD_MOVE,
     WORD_TURN_RIGHT,
@@ -93,8 +95,8 @@ const Letter* command_strings[9] = {
     WORD_PICKUP,
     WORD_RETURN,
     WORD_JMP_1,
-    WORD_JMP_2,
-};
+    WORD_JMP_2
+);
 
 constinit FIXED const uint8_t command_to_string_lut[9] = {
     3, // WAIT
@@ -107,10 +109,6 @@ constinit FIXED const uint8_t command_to_string_lut[9] = {
     8, // JUMP2
     3, // UNUSED WAIT
 };
-
-// uint8_t find_obj_slot(ObjectType t) {
-//     return 1;
-// }
 
 constinit FIXED const uint8_t command_position_lut[12 + 9 + 9] {
     PACK(1, 2),PACK(2, 2),PACK(3, 2),
@@ -162,6 +160,11 @@ static void draw_command() {
 }
 
 void update_command_list(uint8_t new_command) {
+    if (new_command == Command::CMD_RETURN) {
+        is_twox_speed = !is_twox_speed;
+        update_speed_setting();
+        return;
+    }
     auto& idx = command_index[current_sub];
     uint8_t lower_bound = command_lower_bound_lut[current_sub];
     uint8_t upper_bound = command_upper_bound_lut[current_sub];
@@ -244,8 +247,8 @@ static void clear_command_string(bool halfclear) {
     // Clear the text.. Cheat and only clear the last 3 letters to save time
     auto idx = VRAM_INDEX;
     int ppuaddr_row0 = (halfclear)
-        ? 0x2000 | (((uint8_t)Nametable::A) << 8) | ((24) << 5) | (24)
-        : 0x2000 | (((uint8_t)Nametable::A) << 8) | ((24) << 5) | (18);
+        ? 0x2000 | (((uint8_t)Nametable::A) << 8) | ((22) << 5) | (24)
+        : 0x2000 | (((uint8_t)Nametable::A) << 8) | ((22) << 5) | (18);
     int ppuaddr_row1 = ppuaddr_row0 + (1 << 5);
     int ppuaddr_row2 = ppuaddr_row1 + (1 << 5);
     VRAM_BUF[idx+ 0] = MSB(ppuaddr_row0) | NT_UPD_HORZ;
@@ -267,7 +270,8 @@ static void clear_command_string(bool halfclear) {
 
 static void draw_command_string(uint8_t id) {
     clear_command_string(true);
-    render_string(Nametable::A, 18, 24, command_strings[id]);
+    const Letter* command = (const Letter*)SPLIT_ARRAY_POINTER(command_strings, id);
+    render_string(Nametable::A, 18, 22, command);
 }
 
 static void draw_command_string_main_cursor() {
@@ -458,7 +462,7 @@ void game_mode_edit_main() {
 }
 
 constexpr fs8_8 MOVE_SPEED = 0.75_s8_8;
-constexpr fs8_8 TWOX_MOVE_SPEED = 0.75_s8_8;
+constexpr fs8_8 TWOX_MOVE_SPEED = 1.5_s8_8;
 constinit FIXED const fs8_8 x_movement_velocity[4] = {
     0,
     MOVE_SPEED,
@@ -497,15 +501,22 @@ constinit FIXED const int8_t y_movement[4] = {
     0,
 };
 
-static void execute_action(uint8_t slot) {
+
+static bool execute_action(uint8_t slot) {
     // execute the current command
     auto cmd = commands[command_index[current_sub]];
     auto obj = objects[slot];
+    auto cmdcursor = cursors[1];
+    // DEBUGGER(cmd);
     switch ((Command)cmd) {
     case CMD_MOVE: {
         Coord target;
         target.x = obj->x.as_i() + 8 + x_movement[obj->facing_dir];
         target.y = obj->y.as_i() + 8 + y_movement[obj->facing_dir];
+        if (target.x < 80 || target.x > 240 || target.y < 16 || target.y > 160) {
+            // stay in bounds!
+            break;
+        }
         LevelObjType ttype = load_metatile_at_coord(target.x, target.y);
         if (ttype == LevelObjType::SOLID_WALL) {
             break;
@@ -532,14 +543,24 @@ static void execute_action(uint8_t slot) {
         obj.facing_dir = val;
         break;
     }
-    case CMD_JMP_ONE:
+    case CMD_JMP_ONE: {
+        move_cmd_cursor(1);
         current_sub = 1;
-        command_index[1] = 12 - 1;
+        command_index[1] = 12;
+        auto [x, y] = get_pos_from_index();
+        cmdcursor.x = x;
+        cmdcursor.y = y;
         break;
-    case CMD_JMP_TWO:
+    }
+    case CMD_JMP_TWO: {
+        move_cmd_cursor(1);
         current_sub = 2;
-        command_index[2] = 12 + 9 - 1;
+        command_index[2] = 12 + 9;
+        auto [x, y] = get_pos_from_index();
+        cmdcursor.x = x;
+        cmdcursor.y = y;
         break;
+    }
     case CMD_PICKUP: {
         uint8_t px = obj->x.as_i() + 4;
         uint8_t py = obj->y.as_i() + 4;
@@ -549,6 +570,9 @@ static void execute_action(uint8_t slot) {
             update_level_buff(px >> 3, py >> 3, LevelObjType::EMPTY);
             draw_metatile_2_2(Nametable::A, px >> 3, py >> 3, Metatile::BLANK);
         }
+        if (pickup_count == 0) {
+            return true;
+        }
         break;
     }
     case CMD_RETURN:
@@ -556,6 +580,7 @@ static void execute_action(uint8_t slot) {
     case CMD_WAIT:
         break;
     }
+    return false;
 }
 
 void game_mode_execute_main() {
@@ -572,8 +597,6 @@ void game_mode_execute_main() {
     command_index[0] = 0;
     command_index[1] = 0;
     command_index[2] = 0;
-
-    // clear_command_string(false);
     
     // Move the cursor to the start
     auto target = get_pos_from_index();
@@ -598,8 +621,6 @@ void game_mode_execute_main() {
     auto id = commands[command_index[current_sub]];
     draw_command_string(command_to_string_lut[id]);
 
-    // bool just_started = false;
-
     uint8_t frame_length = 1;
 
     while (true) {
@@ -614,7 +635,16 @@ void game_mode_execute_main() {
         }
 
         if (frame_length == 0) {
-            execute_action(0);
+            uint8_t original_sub;
+            do {
+                original_sub = current_sub;
+                if (execute_action(0)) {
+                    // Level complete!
+                    level++;
+                    set_game_mode(MODE_LOAD_LEVEL);
+                    return;
+                }
+            } while (original_sub != current_sub);
             frame_length = base_frame_length;
             auto id = commands[command_index[current_sub]];
             draw_command_string(command_to_string_lut[id]);
@@ -628,7 +658,7 @@ void game_mode_execute_main() {
                 break;
             } else if (command_index[current_sub] == command_lower_bound_lut[current_sub]) {
                 // return to main? should be return to prev sub...
-                DEBUGGER();
+                // DEBUGGER();
                 current_sub = 0;
             }
             
@@ -651,6 +681,13 @@ void game_mode_execute_main() {
     command_index[0] = original_index[0];
     command_index[1] = original_index[1];
     command_index[2] = original_index[2];
+
+    for (pickup_count=0; pickup_count<sizeof(pickup_list); ++pickup_count) {
+        uint8_t p = pickup_list[pickup_count];
+        if (p == 0xff) break;
+        draw_pickup((Point)p);
+        ppu_wait_nmi();
+    }
 
     memcpy((void*)&objects, original_objs, sizeof(Object) * 8);
     set_game_mode(MODE_EDIT);

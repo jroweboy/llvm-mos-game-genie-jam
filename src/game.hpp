@@ -20,14 +20,6 @@ enum Command {
     CMD_END, // used when storing level data to signal we finished the commands
 };
 
-union Point {
-    uint8_t raw;
-    struct {
-        uint8_t y : 4;
-        uint8_t x : 4;
-    };
-};
-
 struct PlayerExtra {
     uint8_t frame;
 };
@@ -96,7 +88,8 @@ extern const uint8_t command_attr_lut[9];
 extern uint8_t commands[12 + 9 + 9];
 extern uint8_t command_index[3];
 extern uint8_t current_sub;
-
+extern uint8_t pickup_list[8];
+extern bool is_twox_speed;
 extern uint8_t pickup_count;
 
 extern uint8_t level_metatiles[(10 * 9) / 2];

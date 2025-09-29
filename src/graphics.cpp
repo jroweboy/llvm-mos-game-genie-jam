@@ -68,8 +68,6 @@ SPLIT_ARRAY(player_msprite,
 void draw_player() {
     auto player = objects[0];
     // param1 == facing dir
-    // if (player.param1 != 0)
-    //     DEBUGGER();
     auto mspr = (uint8_t*)SPLIT_ARRAY_POINTER(player_msprite, player->facing_dir);
     oam_meta_spr(player->x.as_i(), player->y.as_i(), mspr);
 }

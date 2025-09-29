@@ -26,12 +26,15 @@ enum class Facing : uint8_t {
 
 void draw_hud(uint8_t level_num);
 void load_level(uint8_t level_num);
+void draw_pickup(Point p);
 
 extern "C" LevelObjType load_metatile_at_coord(uint8_t x, uint8_t y);
 extern "C" void update_level_buff(uint8_t tile_x, uint8_t tile_y, LevelObjType val);
+extern "C" void update_speed_setting();
 
 SPLIT_ARRAY_DEFINE(all_levels);
 SPLIT_ARRAY_DEFINE(level_titles);
+SPLIT_ARRAY_DEFINE(level_passwords);
 
 constexpr uint8_t L_MULTIPLE = 1 << 7;
 constexpr uint8_t L_HORIZONTAL = 0;
@@ -63,9 +66,9 @@ constexpr uint8_t L_FACING_LEFT = 0b11 << 6;
 
 #define L_FLUSH() static_cast<uint8_t>(LevelObjType::FLUSH_VRAM)
 
-#define L_CMD_MAIN(len) (static_cast<uint8_t>(LevelObjType::CMD_MAIN) + 0), (len)
-#define L_CMD_ONE(len) (static_cast<uint8_t>(LevelObjType::CMD_ONE) + 12), (len)
-#define L_CMD_TWO(len) (static_cast<uint8_t>(LevelObjType::CMD_TWO) + 12 + 9), (len)
+#define L_CMD_MAIN(len) (static_cast<uint8_t>(LevelObjType::CMD_MAIN)), (len)
+#define L_CMD_ONE(len) (static_cast<uint8_t>(LevelObjType::CMD_ONE)), (len)
+#define L_CMD_TWO(len) (static_cast<uint8_t>(LevelObjType::CMD_TWO)), (len)
 
 #define L_END static_cast<uint8_t>(LevelObjType::TERMINATOR)
 
@@ -127,7 +130,7 @@ constexpr uint8_t L_FACING_LEFT = 0b11 << 6;
     A_MANY_HEADER((len), NT_UPD_HORZ, x, y), \
     FOR_EACH(NOP, __VA_ARGS__)
 
-#define A_TR(atr) ((atr) << 0)
-#define A_TL(atr) ((atr) << 2)
-#define A_BR(atr) ((atr) << 4)
-#define A_BL(atr) ((atr) << 6)
+#define A_TL(atr) ((atr) << 0)
+#define A_TR(atr) ((atr) << 2)
+#define A_BL(atr) ((atr) << 4)
+#define A_BR(atr) ((atr) << 6)

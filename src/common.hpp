@@ -282,3 +282,11 @@ struct Coord {
 #define SOA_STRUCT Coord
 #define SOA_MEMBERS MEMBER(x) MEMBER(y)
 #include <soa-struct.inc>
+
+union Point {
+    uint8_t raw;
+    struct {
+        uint8_t y : 4;
+        uint8_t x : 4;
+    };
+};
