@@ -105,6 +105,13 @@ enum ObjectType {
     PLAYER,
     TIMED_WALL,
     PACE_ENEMY,
+    CURSOR,
+};
+
+enum ObjSlot {
+    SLOT_PLAYER = 0,
+    SLOT_MAINCURSOR = 1,
+    SLOT_CMDCURSOR = 2,
 };
 
 enum GameMode {
@@ -288,5 +295,14 @@ union Point {
     struct {
         uint8_t y : 4;
         uint8_t x : 4;
+    };
+};
+
+
+union Word {
+    uint16_t raw;
+    struct {
+        uint8_t lo;
+        uint8_t hi;
     };
 };

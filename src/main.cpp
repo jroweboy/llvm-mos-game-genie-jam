@@ -1,6 +1,5 @@
 
 // Used for standard int size defines
-#include <cstddef>
 #include <cstdint>
 
 // Common C NES libary that includes a simple NMI update routine
@@ -20,11 +19,6 @@
 #include "text_render.hpp"
 #include "levels.hpp"
 #include "metatile.hpp"
-
-// Include a basic nametable thats RLE compressed for the demo
-// const unsigned char nametable[] = {
-//     #embed "../default-nametable-rle.nam"
-// };
 
 // On the Game Genie, only color 0 and 3 of each palette will be used
 static const uint8_t default_palette[32] = {
@@ -132,8 +126,8 @@ void draw_title_screen(uint8_t idx) {
             title_screen_draw_cursor = true;
             uint8_t x = screen[i++];
             uint8_t y = screen[i++];
-            auto cursor = cursors[0];
-            cursor.param1 = 4;
+            auto cursor = objects[SLOT_MAINCURSOR];
+            cursor.long_timer = 4;
             cursor.x = x;
             cursor.y = y;
         } else if (cmd <= DRAW_PLAYER_LEFT) {
@@ -175,10 +169,10 @@ void game_mode_title() {
     }
 
 
-    auto player = objects[0];
-    auto cursor = cursors[0];
+    auto player = objects[SLOT_PLAYER];
+    auto cursor = objects[SLOT_MAINCURSOR];
     player.long_timer = 4;
-    cursor.param1 = 4;
+    cursor.long_timer = 4;
 
     while (true) {
         ppu_wait_nmi();
@@ -220,7 +214,7 @@ void game_mode_title() {
             draw_player();
         }
         if (title_screen_draw_cursor) {
-            draw_cursor(0);
+            draw_cursor(SLOT_MAINCURSOR);
         }
     }
 }
@@ -248,43 +242,35 @@ struct Star {
     // -0.375_s8_8,
     // -0.875_s8_8,
     // -1.875_s8_8,
-constexpr const uint8_t STAR_X_VELOCITY_HI[] = {
+FIXED constexpr const uint8_t STAR_X_VELOCITY_HI[] = {
     ((uint16_t)((-0.75_s8_8).get()) >> 8) & 0xff,
     ((uint16_t)((-1.75_s8_8).get()) >> 8) & 0xff,
     ((uint16_t)((-3.75_s8_8).get()) >> 8) & 0xff,
 };
-constexpr const uint8_t STAR_X_VELOCITY_LO[] = {
+FIXED constexpr const uint8_t STAR_X_VELOCITY_LO[] = {
     ((uint16_t)((-0.75_s8_8).get())) & 0xff,
     ((uint16_t)((-1.75_s8_8).get())) & 0xff,
     ((uint16_t)((-3.75_s8_8).get())) & 0xff,
 };
-constexpr const uint8_t STAR_Y_VELOCITY_HI[] = {
+FIXED constexpr const uint8_t STAR_Y_VELOCITY_HI[] = {
     ((uint16_t)((0.75_s8_8).get()) >> 8) & 0xff,
     ((uint16_t)((1.75_s8_8).get()) >> 8) & 0xff,
     ((uint16_t)((3.75_s8_8).get()) >> 8) & 0xff,
 };
-constexpr const uint8_t STAR_Y_VELOCITY_LO[] = {
+FIXED constexpr const uint8_t STAR_Y_VELOCITY_LO[] = {
     ((uint16_t)((0.75_s8_8).get())) & 0xff,
     ((uint16_t)((1.75_s8_8).get())) & 0xff,
     ((uint16_t)((3.75_s8_8).get())) & 0xff,
 };
-constexpr const uint8_t STAR_TILE_LUT[] = {
+FIXED constexpr const uint8_t STAR_TILE_LUT[] = {
     0x01,
     0x09,
     0x0f
 };
-constexpr const uint8_t STAR_ATTR_LUT[] = {
+FIXED constexpr const uint8_t STAR_ATTR_LUT[] = {
     3,
     2,
     1,
-};
-
-union Word {
-    uint16_t raw;
-    struct {
-        uint8_t lo;
-        uint8_t hi;
-    };
 };
 
 extern volatile char PPUMASK_VAR;
@@ -297,6 +283,12 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
     uint8_t star_y_lo[32];
     uint8_t star_y_hi[32];
     uint8_t star_type[32];
+    uint8_t input_password[4] = {};
+    uint8_t cursor_selected = 0;
+    uint8_t input_position = 0;
+    auto cursor = objects[SLOT_MAINCURSOR];
+    auto inputcursor = objects[SLOT_CMDCURSOR];
+
     for (uint8_t i = 31; i < 128; i--) {
         star_x_hi[i] = (rand() & 0xff);
         star_y_hi[i] = (rand() & 0xff);
@@ -345,27 +337,78 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
                 star_x_hi[i] = (rand() & 0xff);
             }
         }
-        // draw the stars
-        // for (uint8_t i = 31; i < 128; i--) {
-        // }
-        // Turn off sprites
-        // POKE(0x2001, PPUMASK_VAR & (~0b00010000));
-
-        // turn on sprites
-        // POKE(0x2001, PPUMASK_VAR | (0b00010000));
         if (!password_input) {
             if (input & (PAD_START | PAD_A | PAD_B | PAD_SELECT)) {
                 break;
             }
             continue;
-        } else {
+        } else if (!cursor->is_moving) {
             // password input options
+            if (input & PAD_SELECT) {
+                set_game_mode(MODE_RESET);
+                return;
+            }
+            if (input & PAD_START) {
+                // check all passwords for a match
+                for (uint8_t i = 0; i < 4; i++) {
+                    auto password = level_passwords[i];
+                    auto [xhi, xlo] = UNPACK((uint8_t)((password >> 8) & 0xff));
+                    auto [yhi, ylo] = UNPACK((password >> 0) & 0xff);
+                    if (xhi == input_password[0] && xlo == input_password[1]
+                        && yhi == input_password[2] && ylo == input_password[3]) {
+                        // success!
+                        pal_fade_to(4, 2, 2);
+                        ppu_off();
+                        level = i;
+                        set_game_mode(MODE_LOAD_LEVEL);
+                        return;
+                    }
+                }
+                // play 
+            }
+            if (input & PAD_A) {
+                input_password[input_position++] = cursor_selected;
+                uint8_t x = inputcursor->x.as_i() >> 3;
+                uint8_t y = inputcursor->y.as_i() >> 3;
+                draw_metatile_2_3(Nametable::A, x, y, password_alphabet[cursor_selected]);
+                x = inputcursor->x.as_i();
+                wrapped_add(x, 16, 160, 176 + 16*3);
+                set_cursor_target(SLOT_CMDCURSOR, Coord{ .x = x, .y= inputcursor->y.as_i()});
+            }
+            if (input & PAD_B) {
+                uint8_t x = inputcursor->x.as_i();
+                wrapped_sub(x, 16, 176, 176 + 16*4);
+                set_cursor_target(SLOT_CMDCURSOR, Coord{ .x = x, .y= inputcursor->y.as_i()});
+            }
+            uint8_t cursor_x = cursor->x.as_i();
+            uint8_t cursor_y = cursor->y.as_i();
+            if (input & PAD_LEFT) {
+                wrapped_sub(cursor_x, 16, 24, 152);
+            } else if (input & PAD_RIGHT) {
+                wrapped_add(cursor_x, 16, 8, 136);
+            }
+            if (input & (PAD_UP | PAD_DOWN)) {
+                cursor_y = cursor_y == 104 ? 128 : 104;
+            }
+            set_cursor_target(SLOT_MAINCURSOR, Coord{ .x = cursor_x, .y= cursor_y});
+            uint8_t tile_x_pos = ((cursor_x >> 4) - 1);
+            cursor_selected = (cursor_y == 104) ? tile_x_pos : tile_x_pos + 8;
+        }
+        
+        move_object(SLOT_MAINCURSOR);
+        move_object(SLOT_CMDCURSOR);
+        
+        draw_cursor(SLOT_MAINCURSOR);
+        draw_cursor(SLOT_CMDCURSOR);
+        if (cursor.timer != 0) {
+            cursor.timer--;
         }
     }
     pal_fade_to(4, 2, 2);
     ppu_off();
     vram_adr(NAMETABLE_A);
     vram_fill(0, 0x400);
+    set_game_mode(MODE_LOAD_LEVEL);
 }
 
 static void draw_starscreen() {
@@ -383,18 +426,68 @@ static void draw_starscreen() {
 }
 
 void game_mode_enter_password() {
-    
+    auto cursor = objects[SLOT_MAINCURSOR];
+    auto cmdcursor = objects[SLOT_CMDCURSOR];
+    cursor.x = 24;
+    cursor.y = 104;
+    cursor.target_x = 24;
+    cursor.target_y = 104;
+    cursor.anim_state = 12;
+    cursor.state = 20;
+    cursor.timer = 0;
+    cursor.long_timer = 4;
+    cursor.x_vel = 8;
+    cursor.y_vel = 8;
+    cmdcursor.x = 176;
+    cmdcursor.y = 112;
+    cmdcursor.target_x = 176;
+    cmdcursor.target_y = 112;
+    cmdcursor.x_vel = 8;
+    cmdcursor.y_vel = 8;
+    cmdcursor.anim_state = 12;
+    cmdcursor.state = 20;
+
     draw_starscreen();
+    render_string(Nametable::A, 3, 9, "ENTER PASSWORD"_l);
+    for (uint8_t j=0; j<2; j++) {
+        uint8_t x = 3;
+        uint8_t y = j == 0 ? 13 : 16;
+        uint8_t offset = j == 0 ? 0 : 8;
+        for (uint8_t i=0; i< 8; i++) {
+            draw_metatile_2_3(Nametable::A, x, y, password_alphabet[i + offset]);
+            flush_vram_update2();
+            x += 2;
+        }
+    }
+
     update_starfield(true);
     // ppu_on_all();
     // pal_fade_to(0, 2, 2);
     // pal_fade_to(4, 0, 2);
     // ppu_off();
-    set_game_mode(MODE_LOAD_LEVEL);
 }
 
 void game_mode_load_level() {
 
+    
+constexpr uint8_t X_LO_BOUND = (10 * 8);
+constexpr uint8_t Y_LO_BOUND = (22 * 8);
+    auto cursor = objects[SLOT_MAINCURSOR];
+    cursor.is_moving = false;
+    cursor.x = X_LO_BOUND;
+    cursor.y = Y_LO_BOUND;
+    cursor.state = 16;
+    cursor.anim_state = 16;
+    cursor.long_timer = 4;
+    cursor.timer = 0;
+    cursor.anim_timer = 0;
+    cursor.param2 = 0;
+    cursor.facing_dir = 0;
+
+    auto cmdcursor = objects[SLOT_CMDCURSOR];
+    cmdcursor.is_moving = false;
+    cmdcursor.state = 16;
+    cmdcursor.anim_state = 16;
     // Reset level variables
     // Force the sub index for the command slots
     command_index[0] = 0;
@@ -415,7 +508,16 @@ void game_mode_load_level() {
     // generate_password(level);
     render_string(Nametable::A, x, y, title);
     render_string(Nametable::A, 3, 15, "PASSWORD"_l);
-    const Letter* pass = (const Letter*)SPLIT_ARRAY_POINTER(level_passwords, level);
+    // const Letter* pass = (const Letter*)SPLIT_ARRAY_POINTER(level_passwords, level);
+    auto password = level_passwords[level].get();
+    auto [xhi, xlo] = UNPACK((uint8_t)((password >> 8) & 0xff));
+    auto [yhi, ylo] = UNPACK((password >> 0) & 0xff);
+    Letter pass[5];
+    pass[0] = (Letter)5;
+    pass[1] = password_alphabet[xhi];
+    pass[2] = password_alphabet[xlo];
+    pass[3] = password_alphabet[yhi];
+    pass[4] = password_alphabet[ylo];
     render_string(Nametable::A, 22, 15, pass);
 
     update_starfield(false);
@@ -494,22 +596,6 @@ int main() {
     scroll(0, 0);
     // Turn on the screen, showing both the background and sprites
     // ppu_on_all();
-    
-constexpr uint8_t X_LO_BOUND = (10 * 8);
-constexpr uint8_t Y_LO_BOUND = (22 * 8);
-    auto cursor = cursors[0];
-    cursor.is_moving = false;
-    cursor.x = X_LO_BOUND;
-    cursor.y = Y_LO_BOUND;
-    cursor.height = 16;
-    cursor.width = 16;
-    cursor.param1 = 4;
-
-    auto cmdcursor = cursors[1];
-    cmdcursor.is_moving = false;
-    cmdcursor.param1 = 1;
-    cmdcursor.height = 16;
-    cmdcursor.width = 16;
 
     // Now time to start the main game loop
     while (true) {

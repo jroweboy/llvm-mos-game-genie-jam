@@ -77,38 +77,18 @@ constinit FIXED static const uint8_t cursor_expand_timer_lut[] = {
 };
 
 void draw_cursor(uint8_t slot) {
-    auto cursor = cursors[slot];
-    // param1 = longtimer
-    // Run the cursor expando
-    // if (game_mode == GameMode::MODE_EDIT) {
-    //     if (cursor.is_moving) {
-    //         // if we are moving, contract in slightly
-    //         // if (cursor_extra.expansion != (uint8_t)-4) {
-    //         //     cursor_extra.prev_expansion = cursor_extra.expansion;
-    //         // }
-    //         // cursor.expansion = 0;
-    //         // cursor.timer = 0;
-    //         // cursor.param1 = 4;
-    //         // cursor.expand_timer = 0;
-    //         // cursor.expand_direction = false;
-    //     } else if (cursor.timer == 0) {
-            // if (cursor_extra.expansion == (uint8_t)-4) {
-            //     cursor_extra.expansion = cursor_extra.prev_expansion;
-            // }
-            // other wise grow and shrink over time
+    auto cursor = objects[slot];
     if (cursor->timer == 0) {
-            cursor.expand_timer++;
-            cursor.expand_timer &= 7;
-            cursor.timer = cursor_expand_timer_lut[cursor.expand_timer];
-            cursor.expansion += cursor->expand_direction ? -1 : 1;
-            cursor.param1 = cursor->param1 - 1;
-            if (cursor->param1 == 0) {
-                cursor.param1 = 4;
-                cursor.expand_direction = !cursor->expand_direction;
-            }
+        cursor.anim_timer++;
+        cursor.anim_timer &= 7;
+        cursor.timer = cursor_expand_timer_lut[cursor.anim_timer];
+        cursor.param2 += cursor->facing_dir ? -1 : 1;
+        cursor.long_timer = cursor->long_timer - 1;
+        if (cursor->long_timer == 0) {
+            cursor.long_timer = 4;
+            cursor.facing_dir = !cursor->facing_dir;
+        }
     }
-    //     }
-    // }
     // y, tile, attr, x
     OAM_BUF[SPRID+ 2] = 0x01;
     OAM_BUF[SPRID+ 6] = 0x01;
@@ -119,22 +99,18 @@ void draw_cursor(uint8_t slot) {
     OAM_BUF[SPRID+ 5] = 0x0e;
     OAM_BUF[SPRID+ 9] = 0x07;
     OAM_BUF[SPRID+13] = 0x0b;
-    // OAM_BUF[SPRID+ 1] = 0x09;
-    // OAM_BUF[SPRID+13] = 0x09;
-    // OAM_BUF[SPRID+ 5] = 0x06;
-    // OAM_BUF[SPRID+ 9] = 0x06;
     // top left
-    OAM_BUF[SPRID+ 0] = cursor->y - 4 - 1 - cursor->expansion;
-    OAM_BUF[SPRID+ 3] = cursor->x - 4 - cursor->expansion;
+    OAM_BUF[SPRID+ 0] = cursor->y.as_i() - 4 - 1 - cursor->param2;
+    OAM_BUF[SPRID+ 3] = cursor->x.as_i() - 4 - cursor->param2;
     // top right
-    OAM_BUF[SPRID+ 4] = cursor->y - 4 - 1 - cursor->expansion;
-    OAM_BUF[SPRID+ 7] = cursor->x - 4 + cursor->width + cursor->expansion;
+    OAM_BUF[SPRID+ 4] = cursor->y.as_i() - 4 - 1 - cursor->param2;
+    OAM_BUF[SPRID+ 7] = cursor->x.as_i() - 4 + cursor->anim_state + cursor->param2;
     // bot left
-    OAM_BUF[SPRID+ 8] = cursor->y - 4 - 1 + cursor->height + cursor->expansion;
-    OAM_BUF[SPRID+11] = cursor->x - 4 - cursor->expansion;
+    OAM_BUF[SPRID+ 8] = cursor->y.as_i() - 4 - 1 + cursor->state + cursor->param2;
+    OAM_BUF[SPRID+11] = cursor->x.as_i() - 4 - cursor->param2;
     // bot right
-    OAM_BUF[SPRID+12] = cursor->y - 4 - 1 + cursor->height + cursor->expansion;
-    OAM_BUF[SPRID+15] = cursor->x - 4 + cursor->width + cursor->expansion;
+    OAM_BUF[SPRID+12] = cursor->y.as_i() - 4 - 1 + cursor->state + cursor->param2;
+    OAM_BUF[SPRID+15] = cursor->x.as_i() - 4 + cursor->anim_state + cursor->param2;
     SPRID += 16;
 }
 

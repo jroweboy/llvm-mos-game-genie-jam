@@ -36,7 +36,7 @@ bool is_twox_speed;
 
 constinit FIXED const uint8_t sub_attr_y_lut[] = { 2, 12, 20 };
 
-soa::Array<Cursor, 2> cursors;
+// soa::Array<Cursor, 2> cursors;
 
 
 constinit FIXED static const uint8_t command_lower_bound_lut[] = { 0, 12, 12 + 9 };
@@ -110,7 +110,7 @@ constinit FIXED const uint8_t command_to_string_lut[9] = {
     3, // UNUSED WAIT
 };
 
-constinit FIXED const uint8_t command_position_lut[12 + 9 + 9] {
+constinit FIXED const uint8_t command_position_lut[12 + 9 + 9] = {
     PACK(1, 2),PACK(2, 2),PACK(3, 2),
     PACK(1, 3),PACK(2, 3),PACK(3, 3),
     PACK(1, 4),PACK(2, 4),PACK(3, 4),
@@ -199,42 +199,54 @@ void move_object(uint8_t slot) {
     if (object->x.as_i() == object->target_x && object->y.as_i() == object->target_y) {
         object.is_moving = false;
     }
+
+    if (object->type == CURSOR) {
+        if (object->x_vel.as_i() < -minimum_velocity)
+            object.x_vel = MMAX((object->target_x - object->x.as_i()) >> 2, -maximum_velocity);
+        else if (object->x_vel > minimum_velocity)
+            object.x_vel = MMIN((object->target_x - object->x.as_i()) >> 2, maximum_velocity);
+        
+        if (object->y_vel.as_i() < -minimum_velocity)
+            object.y_vel = MMAX((object->target_y - object->y.as_i()) >> 2, -maximum_velocity);
+        else if (object->y_vel.as_i() >= minimum_velocity)
+            object.y_vel = MMIN((object->target_y - object->y.as_i()) >> 2, maximum_velocity);
+    }
 }
 
-void move_cursor(uint8_t slot) {
-    auto cursor = cursors[slot];
-    if (cursor->x < cursor->target_x) {
-        cursor.x = cursor->x + cursor->x_vel;
-        if (cursor->x > cursor->target_x)
-            cursor.x = cursor->target_x;
-    } else if (cursor->x > cursor->target_x) {
-        cursor.x = cursor->x + cursor->x_vel;
-        if (cursor->x < cursor->target_x)
-            cursor.x = cursor->target_x;
-    }
-    if (cursor->y < cursor->target_y) {
-        cursor.y = cursor->y + cursor->y_vel;
-        if (cursor->y > cursor->target_y)
-            cursor.y = cursor->target_y;
-    } else if (cursor->y > cursor->target_y) {
-        cursor.y = cursor->y + cursor->y_vel;
-        if (cursor->y < cursor->target_y)
-            cursor.y = cursor->target_y;
-    }
-    if (cursor->x == cursor->target_x && cursor->y == cursor->target_y) {
-        cursor.is_moving = false;
-    }
+// void move_cursor(uint8_t slot) {
+//     auto cursor = cursors[slot];
+//     if (cursor->x < cursor->target_x) {
+//         cursor.x = cursor->x + cursor->x_vel;
+//         if (cursor->x > cursor->target_x)
+//             cursor.x = cursor->target_x;
+//     } else if (cursor->x > cursor->target_x) {
+//         cursor.x = cursor->x + cursor->x_vel;
+//         if (cursor->x < cursor->target_x)
+//             cursor.x = cursor->target_x;
+//     }
+//     if (cursor->y < cursor->target_y) {
+//         cursor.y = cursor->y + cursor->y_vel;
+//         if (cursor->y > cursor->target_y)
+//             cursor.y = cursor->target_y;
+//     } else if (cursor->y > cursor->target_y) {
+//         cursor.y = cursor->y + cursor->y_vel;
+//         if (cursor->y < cursor->target_y)
+//             cursor.y = cursor->target_y;
+//     }
+//     if (cursor->x == cursor->target_x && cursor->y == cursor->target_y) {
+//         cursor.is_moving = false;
+//     }
     
-    if (cursor->x_vel < -minimum_velocity)
-        cursor.x_vel = MMAX((cursor->target_x - cursor->x) >> 2, -maximum_velocity);
-    else if (cursor->x_vel > minimum_velocity)
-        cursor.x_vel = MMIN((cursor->target_x - cursor->x) >> 2, maximum_velocity);
+//     if (cursor->x_vel < -minimum_velocity)
+//         cursor.x_vel = MMAX((cursor->target_x - cursor->x) >> 2, -maximum_velocity);
+//     else if (cursor->x_vel > minimum_velocity)
+//         cursor.x_vel = MMIN((cursor->target_x - cursor->x) >> 2, maximum_velocity);
     
-    if (cursor->y_vel < -minimum_velocity)
-        cursor.y_vel = MMAX((cursor->target_y - cursor->y) >> 2, -maximum_velocity);
-    else if (cursor->y_vel >= minimum_velocity)
-        cursor.y_vel = MMIN((cursor->target_y - cursor->y) >> 2, maximum_velocity);
-}
+//     if (cursor->y_vel < -minimum_velocity)
+//         cursor.y_vel = MMAX((cursor->target_y - cursor->y) >> 2, -maximum_velocity);
+//     else if (cursor->y_vel >= minimum_velocity)
+//         cursor.y_vel = MMIN((cursor->target_y - cursor->y) >> 2, maximum_velocity);
+// }
 
 constexpr uint8_t X_LO_BOUND = (10 * 8);
 constexpr uint8_t X_HI_BOUND = (14 * 8);
@@ -275,28 +287,28 @@ static void draw_command_string(uint8_t id) {
 }
 
 static void draw_command_string_main_cursor() {
-    auto cursor = cursors[0];    
-    uint8_t x = (cursor->x - X_LO_BOUND) / 16;
-    uint8_t y = (cursor->y - Y_LO_BOUND) / 16;
+    auto cursor = objects[1];
+    uint8_t x = (cursor->x.as_i() - X_LO_BOUND) / 16;
+    uint8_t y = (cursor->y.as_i() - Y_LO_BOUND) / 16;
     uint8_t str = x + y * 3;
     draw_command_string(str);
 }
 
-static void set_cursor_target(uint8_t idx, Coord target) {
-    auto cursor = cursors[idx];
+void set_cursor_target(uint8_t idx, Coord target) {
+    auto cursor = objects[idx];
     cursor.is_moving = true;
     cursor.target_x = target.x;
     cursor.target_y = target.y;
-    cursor.x_vel = (cursor->target_x - cursor->x) / 2;
-    cursor.y_vel = (cursor->target_y - cursor->y) / 2;
-    if (cursor->x_vel < 0)
-        cursor.x_vel = MMIN(cursor->x_vel, -maximum_velocity);
+    cursor.x_vel = (cursor->target_x - cursor->x.as_i()) / 2;
+    cursor.y_vel = (cursor->target_y - cursor->y.as_i()) / 2;
+    if (cursor->x_vel.as_i() < 0)
+        cursor.x_vel = MMIN(cursor->x_vel.as_i(), -maximum_velocity);
     else
-        cursor.x_vel = MMAX(cursor->x_vel, maximum_velocity);
-    if (cursor->y_vel < 0)
-        cursor.y_vel = MMIN(cursor->y_vel, -maximum_velocity);
+        cursor.x_vel = MMAX(cursor->x_vel.as_i(), maximum_velocity);
+    if (cursor->y_vel.as_i() < 0)
+        cursor.y_vel = MMIN(cursor->y_vel.as_i(), -maximum_velocity);
     else
-        cursor.y_vel = MMAX(cursor->y_vel, maximum_velocity);
+        cursor.y_vel = MMAX(cursor->y_vel.as_i(), maximum_velocity);
 }
 
 static void move_cmd_cursor(uint8_t diff) {
@@ -315,7 +327,7 @@ void game_mode_edit_main() {
     uint8_t read_ptr = 0;
     uint8_t write_ptr = 0;
     
-    auto cursor = cursors[0];
+    auto cursor = objects[1];
     // cursor.is_moving = false;
     // cursor.x = X_LO_BOUND;
     // cursor.y = Y_LO_BOUND;
@@ -323,7 +335,7 @@ void game_mode_edit_main() {
     // cursor.width = 16;
     // cursor.param1 = 4;
 
-    auto cmdcursor = cursors[1];
+    auto cmdcursor = objects[2];
     // cmdcursor.is_moving = false;
     // cmdcursor.param1 = 1;
     // cmdcursor.height = 16;
@@ -364,7 +376,7 @@ void game_mode_edit_main() {
             if (input & PAD_SELECT) {
                 update_sub_attribute();
                 auto target = get_pos_from_index();
-                set_cursor_target(1, target);
+                set_cursor_target(SLOT_CMDCURSOR, target);
             }
             // Calculate new cursor position
             if (input & (PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT)) {
@@ -383,13 +395,13 @@ void game_mode_edit_main() {
                         move_cmd_cursor(1);
                     }
                     auto target = get_pos_from_index();
-                    set_cursor_target(1, target);
+                    set_cursor_target(SLOT_CMDCURSOR, target);
                 } else {
                     // Move the cursor for the selections
                     prev_is_moving = false;
 
-                    uint8_t orig_x = cursor->x;
-                    uint8_t orig_y = cursor->y;
+                    uint8_t orig_x = cursor->x.as_i();
+                    uint8_t orig_y = cursor->y.as_i();
 
                     Coord target = {.x = orig_x, .y = orig_y};
 
@@ -417,23 +429,23 @@ void game_mode_edit_main() {
                             target.x += 16;
                         }
                     }
-                    set_cursor_target(0, target);
+                    set_cursor_target(SLOT_MAINCURSOR, target);
                 }
             }
 
             if (input & PAD_B) {
                 move_cmd_cursor(-1);
                 auto target = get_pos_from_index();
-                set_cursor_target(1, target);
+                set_cursor_target(SLOT_CMDCURSOR, target);
             }
 
             if (input & PAD_A) {
-                uint8_t x = (cursor->x - X_LO_BOUND) / 16;
-                uint8_t y = (cursor->y - Y_LO_BOUND) / 16;
+                uint8_t x = (cursor->x.as_i() - X_LO_BOUND) / 16;
+                uint8_t y = (cursor->y.as_i() - Y_LO_BOUND) / 16;
                 uint8_t idx = x + y * 3;
                 update_command_list(cursor_command_lut[idx]);
                 auto target = get_pos_from_index();
-                set_cursor_target(1, target);
+                set_cursor_target(SLOT_CMDCURSOR, target);
             }
 
             if (input & PAD_START) {
@@ -445,15 +457,15 @@ void game_mode_edit_main() {
                 prev_is_moving = cursor->is_moving;
                 draw_command_string_main_cursor();
             }
-            move_cursor(0);
+            move_object(SLOT_MAINCURSOR);
         }
 
         if (cmdcursor->is_moving)
-            move_cursor(1);
+            move_object(SLOT_CMDCURSOR);
 
         draw_player();
-        draw_cursor(0);
-        draw_cursor(1);
+        draw_cursor(SLOT_MAINCURSOR);
+        draw_cursor(SLOT_CMDCURSOR);
 
         if (cursor.timer != 0) {
             cursor.timer--;
@@ -506,7 +518,7 @@ static bool execute_action(uint8_t slot) {
     // execute the current command
     auto cmd = commands[command_index[current_sub]];
     auto obj = objects[slot];
-    auto cmdcursor = cursors[1];
+    auto cmdcursor = objects[2];
     // DEBUGGER(cmd);
     switch ((Command)cmd) {
     case CMD_MOVE: {
@@ -584,7 +596,7 @@ static bool execute_action(uint8_t slot) {
 }
 
 void game_mode_execute_main() {
-    auto cmdcursor = cursors[1];
+    auto cmdcursor = objects[2];
     cmdcursor.is_moving = true;
 
     uint8_t original_objs[sizeof(Object) * 8];
@@ -600,13 +612,13 @@ void game_mode_execute_main() {
     
     // Move the cursor to the start
     auto target = get_pos_from_index();
-    set_cursor_target(1, target);
+    set_cursor_target(SLOT_CMDCURSOR, target);
     while (cmdcursor.is_moving) {
         ppu_wait_nmi();
         oam_clear();
         
-        move_cursor(1);
-        draw_cursor(1);
+        move_object(SLOT_CMDCURSOR);
+        draw_cursor(SLOT_CMDCURSOR);
         draw_player();
     }
 
@@ -663,16 +675,16 @@ void game_mode_execute_main() {
             }
             
             auto target = get_pos_from_index();
-            set_cursor_target(1, target);
+            set_cursor_target(SLOT_CMDCURSOR, target);
         } else {
             if (cmdcursor->is_moving) {
-                move_cursor(1);
+                move_object(SLOT_CMDCURSOR);
             }
             move_object(0);
             frame_length--;
         }
 
-        draw_cursor(1);
+        draw_cursor(SLOT_CMDCURSOR);
         draw_player();
     }
 

@@ -1,5 +1,6 @@
 #pragma once 
 
+#include <soa.h>
 #include <stdint.h>
 #include <neslib.h>
 #include "common.hpp"
@@ -32,9 +33,14 @@ extern "C" LevelObjType load_metatile_at_coord(uint8_t x, uint8_t y);
 extern "C" void update_level_buff(uint8_t tile_x, uint8_t tile_y, LevelObjType val);
 extern "C" void update_speed_setting();
 
+constexpr uint8_t LEVEL_COUNT = 4;
+
 SPLIT_ARRAY_DEFINE(all_levels);
 SPLIT_ARRAY_DEFINE(level_titles);
-SPLIT_ARRAY_DEFINE(level_passwords);
+extern const soa::Array<uint16_t, LEVEL_COUNT> level_passwords;
+// SPLIT_ARRAY_DEFINE(level_passwords);
+
+extern const Letter password_alphabet[16];
 
 constexpr uint8_t L_MULTIPLE = 1 << 7;
 constexpr uint8_t L_HORIZONTAL = 0;

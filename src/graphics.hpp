@@ -4,8 +4,8 @@
 
 __attribute__((leaf)) void pal_fade_to(char from, char to, char duration);
 
-void draw_cursor(uint8_t slot);
-void draw_player();
+extern "C" void draw_cursor(uint8_t slot);
+extern "C" void draw_player();
 
 extern const uint8_t arrow_left_metasprite[];
 extern const uint8_t arrow_up_metasprite[];
