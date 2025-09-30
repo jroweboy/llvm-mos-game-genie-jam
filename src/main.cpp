@@ -22,6 +22,41 @@
 
 using namespace fixedpoint_literals;
 
+
+// Trim the pal bright table back to just what we use
+__asm__(R"ASM(
+.section .rodata.bright_table,"a",@progbits
+.globl __palBrightTableL
+.globl __palBrightTableH
+__palBrightTableL:
+
+	.byte palBrightTable0@mos16lo,palBrightTable1@mos16lo,palBrightTable2@mos16lo
+	.byte palBrightTable3@mos16lo,palBrightTable4@mos16lo
+
+__palBrightTableH:
+
+	.byte palBrightTable0@mos16hi,palBrightTable1@mos16hi,palBrightTable2@mos16hi
+	.byte palBrightTable3@mos16hi,palBrightTable4@mos16hi
+
+palBrightTable0:
+	.byte $0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f	;black
+palBrightTable1:
+	.byte $0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f
+palBrightTable2:
+	.byte $0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f
+palBrightTable3:
+	.byte $0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f,$0f
+palBrightTable4:
+	.byte $00,$01,$02,$03,$04,$05,$06,$07,$08,$09,$0a,$0b,$0c,$0f,$0f,$0f	;normal colors
+palBrightTable5:
+	.byte $10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$1a,$1b,$1c,$00,$00,$00
+palBrightTable6:
+	.byte $10,$21,$22,$23,$24,$25,$26,$27,$28,$29,$2a,$2b,$2c,$10,$10,$10	;$10 because $20 is the same as $30
+palBrightTable7:
+	.byte $30,$31,$32,$33,$34,$35,$36,$37,$38,$39,$3a,$3b,$3c,$20,$20,$20
+)ASM"
+);
+
 // On the Game Genie, only color 0 and 3 of each palette will be used
 static const uint8_t default_palette[32] = {
 // BG Palette
@@ -241,29 +276,35 @@ struct Star {
 #define SOA_MEMBERS MEMBER(x) MEMBER(y) MEMBER(x_vel) MEMBER(y_vel) MEMBER(attr) MEMBER(tile)
 #include <soa-struct.inc>
 
-FIXED constexpr const uint8_t STAR_X_VELOCITY_HI[] = {
-    ((uint16_t)((-0.75_s8_8).get()) >> 8) & 0xff,
-    ((uint16_t)((-1.75_s8_8).get()) >> 8) & 0xff,
-    ((uint16_t)((-2.75_s8_8).get()) >> 8) & 0xff,
-    ((uint16_t)((-3.75_s8_8).get()) >> 8) & 0xff,
+// FIXED constexpr const uint8_t STAR_X_VELOCITY_HI[] = {
+//     ((uint16_t)((-0.75_s8_8).get()) >> 8) & 0xff,
+//     ((uint16_t)((-1.75_s8_8).get()) >> 8) & 0xff,
+//     ((uint16_t)((-2.75_s8_8).get()) >> 8) & 0xff,
+//     ((uint16_t)((-3.75_s8_8).get()) >> 8) & 0xff,
+// };
+// FIXED constexpr const uint8_t STAR_X_VELOCITY_LO[] = {
+//     ((uint16_t)((-0.75_s8_8).get())) & 0xff,
+//     ((uint16_t)((-1.75_s8_8).get())) & 0xff,
+//     ((uint16_t)((-2.75_s8_8).get())) & 0xff,
+//     ((uint16_t)((-3.75_s8_8).get())) & 0xff,
+// };
+// FIXED constexpr const uint8_t STAR_Y_VELOCITY_HI[] = {
+//     ((uint16_t)((0.75_s8_8).get()) >> 8) & 0xff,
+//     ((uint16_t)((1.75_s8_8).get()) >> 8) & 0xff,
+//     ((uint16_t)((2.75_s8_8).get()) >> 8) & 0xff,
+//     ((uint16_t)((3.75_s8_8).get()) >> 8) & 0xff,
+// };
+// FIXED constexpr const uint8_t STAR_Y_VELOCITY_LO[] = {
+//     ((uint16_t)((0.75_s8_8).get())) & 0xff,
+//     ((uint16_t)((1.75_s8_8).get())) & 0xff,
+//     ((uint16_t)((2.75_s8_8).get())) & 0xff,
+//     ((uint16_t)((3.75_s8_8).get())) & 0xff,
+// };
+FIXED constexpr const int8_t STAR_X_VELOCITY[] = {
+    -1, -2, -3, -4
 };
-FIXED constexpr const uint8_t STAR_X_VELOCITY_LO[] = {
-    ((uint16_t)((-0.75_s8_8).get())) & 0xff,
-    ((uint16_t)((-1.75_s8_8).get())) & 0xff,
-    ((uint16_t)((-2.75_s8_8).get())) & 0xff,
-    ((uint16_t)((-3.75_s8_8).get())) & 0xff,
-};
-FIXED constexpr const uint8_t STAR_Y_VELOCITY_HI[] = {
-    ((uint16_t)((0.75_s8_8).get()) >> 8) & 0xff,
-    ((uint16_t)((1.75_s8_8).get()) >> 8) & 0xff,
-    ((uint16_t)((2.75_s8_8).get()) >> 8) & 0xff,
-    ((uint16_t)((3.75_s8_8).get()) >> 8) & 0xff,
-};
-FIXED constexpr const uint8_t STAR_Y_VELOCITY_LO[] = {
-    ((uint16_t)((0.75_s8_8).get())) & 0xff,
-    ((uint16_t)((1.75_s8_8).get())) & 0xff,
-    ((uint16_t)((2.75_s8_8).get())) & 0xff,
-    ((uint16_t)((3.75_s8_8).get())) & 0xff,
+FIXED constexpr const int8_t STAR_Y_VELOCITY[] = {
+    1, 2, 3, 4
 };
 FIXED constexpr const uint8_t STAR_TILE_LUT[] = {
     0x01,
@@ -283,10 +324,10 @@ extern __zp unsigned char SPRID;
 extern char OAM_BUF[256];
 
 __attribute__((cold)) static void update_starfield(bool password_input) {
-    uint8_t star_x_lo[32];
-    uint8_t star_x_hi[32];
-    uint8_t star_y_lo[32];
-    uint8_t star_y_hi[32];
+    // uint8_t star_x_lo[32];
+    uint8_t star_x[32];
+    // uint8_t star_y_lo[32];
+    uint8_t star_y[32];
     uint8_t star_type[32];
     uint8_t input_password[4] = {};
     uint8_t cursor_selected = 0;
@@ -295,8 +336,8 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
     auto inputcursor = objects[SLOT_CMDCURSOR];
 
     for (uint8_t i = 31; i < 128; i--) {
-        star_x_hi[i] = (rand() & 0xff);
-        star_y_hi[i] = (rand() & 0xff);
+        star_x[i] = (rand() & 0xff);
+        star_y[i] = (rand() & 0xff);
         uint8_t type = rand() & 0x03;
         star_type[i] = type;
     }
@@ -313,79 +354,94 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
     while (true) {
         ppu_wait_nmi();
         oam_clear();
+        auto input = pad_trigger(0);
 
         OAM_BUF[0] = 55;
         OAM_BUF[1] = 0xf;
         OAM_BUF[2] = 0x0;
         OAM_BUF[3] = 248;
         SPRID += 4;
-
-        auto input = pad_trigger(0);
         // move the stars
         for (uint8_t i = 31; i < 128; i--) {
             // uint8_t boost = star_type[i] & 0b11111100;
             uint8_t type = star_type[i];
-            Word x_pos{.lo = star_x_lo[i], .hi = star_x_hi[i]};
-            Word x_vel{.lo = STAR_X_VELOCITY_LO[type], .hi = STAR_X_VELOCITY_HI[type]};
-            Word x_res{.raw = (x_pos.raw + x_vel.raw) };
-            star_x_lo[i] = x_res.lo;
-            star_x_hi[i] = x_res.hi;
+            star_x[i] += STAR_X_VELOCITY[type];
+            star_y[i] += STAR_Y_VELOCITY[type];
+            // Word x_pos{.lo = star_x_lo[i], .hi = star_x_hi[i]};
+            // Word x_vel{.lo = STAR_X_VELOCITY_LO[type], .hi = STAR_X_VELOCITY_HI[type]};
+            // Word x_res{.raw = (x_pos.raw + x_vel.raw) };
+            // star_x_lo[i] = x_res.lo;
+            // star_x_hi[i] = x_res.hi;
 
             // Word y_vel{.lo = star_y_vel_lo[i], .hi = star_y_vel_hi[i]};
-            Word y_vel{.lo = STAR_Y_VELOCITY_LO[type], .hi = STAR_Y_VELOCITY_HI[type]};
-            Word y_pos{.lo = star_y_lo[i], .hi = star_y_hi[i]};
-            Word y_res{.raw = (y_pos.raw + y_vel.raw) };
-            star_y_lo[i] = y_res.lo;
-            star_y_hi[i] = y_res.hi;
+            // Word y_vel{.lo = STAR_Y_VELOCITY_LO[type], .hi = STAR_Y_VELOCITY_HI[type]};
+            // Word y_pos{.lo = star_y_lo[i], .hi = star_y_hi[i]};
+            // Word y_res{.raw = (y_pos.raw + y_vel.raw) };
+            // star_y_lo[i] = y_res.lo;
+            // star_y_hi[i] = y_res.hi;
 
-            if (star_y_hi[i] > 250) {
-                star_x_hi[i] = (rand() & 0xff);
-                star_type[i] = rand() & 0x03;
-            }
-        }
-        // wait for sprite zero
-        DEBUGGER();
-        while (!(PEEK(0x2002) & 0x40));
-        // Fixed delay for waiting to disable sprites
-        delay_256a_x_33_clocks(1, 0x30);
-        POKE(0x2001, PPUMASK_VAR & (~0b00010000));
-        delay_256a_x_33_clocks(1, 0x85);
-        POKE(0x2001, PPUMASK_VAR | (0b00010000));
-
-        // NOTE: THIS MUST BE CONSTANT TIME
-        for (uint8_t i = 31; i < 128; i--) {
-            uint8_t type = star_type[i];
-            // auto real_y = star_y_hi[i] > 56 && star_y_hi[i] < 164 ? 255 : star_y_hi[i];
-            uint8_t real_y;
-            __asm__(R"ASM(
-                cmp #56 - 1  ; 2   2
-                bcc .L1      ; 2-3 4
-                cmp #157   ; 2   6
-                bcs .L2      ; 2-3 8
-                lda #$ff     ; 2   10
-                jmp .Exit    ; 3   13
-            .L1:
-                nop          ; 2   7
-                nop          ; 2   9
-            .L2:
-                nop          ; 2   11
-                nop          ; 2   13
-            .Exit:
-                )ASM"
-                : "=a"(real_y)
-                : "a"(star_y_hi[i])
-                : "p"
-            );
+            auto real_y = star_y[i] > 56 && star_y[i] < 158 ? 255 : star_y[i];
             OAM_BUF[SPRID + 0] = real_y;
-            OAM_BUF[SPRID + 3] = star_x_hi[i];
+            OAM_BUF[SPRID + 3] = star_x[i];
             OAM_BUF[SPRID + 1] = STAR_TILE_LUT[type];
             OAM_BUF[SPRID + 2] = STAR_ATTR_LUT[type];
             SPRID += 4;
+            if (star_y[i] > 250) {
+                star_x[i] = (rand() & 0xff);
+                star_type[i] = rand() & 0x03;
+            }
         }
-        delay_256a_x_33_clocks(0x16, 0xa0);
+        
+        while (!(PEEK(0x2002) & 0x40))
+            ;
+        // Fixed delay for waiting to disable sprites
+        constexpr uint8_t delay_a1 = 0x01;
+        constexpr uint8_t delay_x1 = 0x28;
+        delay_256a_x_33_clocks(delay_a1, delay_x1);
         POKE(0x2001, PPUMASK_VAR & (~0b00010000));
-        delay_256a_x_33_clocks(0x4, 0x90);
+        constexpr uint8_t delay_a2 = 0x03;
+        constexpr uint8_t delay_x2 = 0xb8;
+        delay_256a_x_33_clocks(delay_a2, delay_x2);
         POKE(0x2001, PPUMASK_VAR | (0b00010000));
+        constexpr uint8_t delay_a3 = 0x25;
+        constexpr uint8_t delay_x3 = 0x70;
+        delay_256a_x_33_clocks(delay_a3, delay_x3);
+        POKE(0x2001, PPUMASK_VAR & (~0b00010000));
+        constexpr uint8_t delay_a4 = 0x03;
+        constexpr uint8_t delay_x4 = 0x48;
+        delay_256a_x_33_clocks(delay_a4, delay_x4);
+        POKE(0x2001, PPUMASK_VAR | (0b00010000));
+
+        // wait for sprite zero
+
+        // NOTE: THIS MUST BE CONSTANT TIME (not true anymore?)
+        // for (uint8_t i = 31; i < 128; i--) {
+        //     // uint8_t real_y;
+        //     // __asm__(R"ASM(
+        //     //     cmp #56 - 1  ; 2   2
+        //     //     bcc .L1      ; 2-3 4
+        //     //     cmp #157   ; 2   6
+        //     //     bcs .L2      ; 2-3 8
+        //     //     lda #$ff     ; 2   10
+        //     //     jmp .Exit    ; 3   13
+        //     // .L1:
+        //     //     nop          ; 2   7
+        //     //     nop          ; 2   9
+        //     // .L2:
+        //     //     nop          ; 2   11
+        //     //     nop          ; 2   13
+        //     // .Exit:
+        //     //     )ASM"
+        //     //     : "=a"(real_y)
+        //     //     : "a"(star_y_hi[i])
+        //     //     : "p"
+        //     // );
+        //     OAM_BUF[SPRID + 0] = real_y;
+        //     OAM_BUF[SPRID + 3] = star_x_hi[i];
+        //     OAM_BUF[SPRID + 1] = STAR_TILE_LUT[type];
+        //     OAM_BUF[SPRID + 2] = STAR_ATTR_LUT[type];
+        //     SPRID += 4;
+        // }
         if (!password_input) {
             if (input & (PAD_START | PAD_A | PAD_B | PAD_SELECT)) {
                 break;
@@ -414,7 +470,7 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
                         return;
                     }
                 }
-                // play 
+                // TODO: password bad sfx
             }
             if (input & PAD_A) {
                 input_password[input_position++] = cursor_selected;
@@ -444,7 +500,7 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
             uint8_t tile_x_pos = ((cursor_x >> 4) - 1);
             cursor_selected = (cursor_y == 104) ? tile_x_pos : tile_x_pos + 8;
         }
-        
+
         move_object(SLOT_MAINCURSOR);
         move_object(SLOT_CMDCURSOR);
         
@@ -453,6 +509,7 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
         if (cursor.timer != 0) {
             cursor.timer--;
         }
+
     }
     pal_fade(false);
     ppu_off();
