@@ -1,12 +1,9 @@
 #pragma once
 
 #include <cstdint>
-#include "fixed_point2.hpp"
 #include <soa.h>
 
 #include "common.hpp"
-
-using namespace fixedpoint_literals;
 
 enum Command {
     CMD_WAIT,
@@ -92,7 +89,7 @@ extern uint8_t commands[12 + 9 + 9];
 extern uint8_t command_index[3];
 extern uint8_t current_sub;
 extern uint8_t pickup_list[8];
-extern bool is_twox_speed;
+extern uint8_t speed_setting;
 extern uint8_t pickup_count;
 
 extern uint8_t level_metatiles[(10 * 9) / 2];

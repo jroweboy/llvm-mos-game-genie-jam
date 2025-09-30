@@ -20,6 +20,8 @@
 #include "levels.hpp"
 #include "metatile.hpp"
 
+using namespace fixedpoint_literals;
+
 // On the Game Genie, only color 0 and 3 of each palette will be used
 static const uint8_t default_palette[32] = {
 // BG Palette
@@ -156,7 +158,7 @@ void draw_title_screen(uint8_t idx) {
     }
     ppu_wait_nmi();
     ppu_on_all();
-    pal_fade_to(0, 4, 2);
+    pal_fade(true);
 }
 
 void game_mode_title() {
@@ -167,7 +169,6 @@ void game_mode_title() {
         // Initialize title screen
         draw_title_screen(current_screen);
     }
-
 
     auto player = objects[SLOT_PLAYER];
     auto cursor = objects[SLOT_MAINCURSOR];
@@ -181,12 +182,12 @@ void game_mode_title() {
 
         auto input = get_pad_new(0);
         if (input & PAD_START) {
-            pal_fade_to(4, 0, 4);
+            pal_fade(false);
             level = 0;
             set_game_mode(MODE_LOAD_LEVEL);
             return;
         } else if (input & PAD_SELECT) {
-            pal_fade_to(4, 0, 4);
+            pal_fade(false);
             set_game_mode(MODE_PASSWORD);
             return;
         }
@@ -199,7 +200,7 @@ void game_mode_title() {
 
         if (current_screen != prev_screen) {
             prev_screen = current_screen;
-            pal_fade_to(4, 0, 2);
+            pal_fade(false);
             draw_title_screen(current_screen);
         }
 
@@ -220,8 +221,9 @@ void game_mode_title() {
 }
 
 FIXED const uint8_t starfield_screen[] = {
-    T_HORZ_REPT(0x1f, 1, 7, 0x03),
-    T_HORZ_REPT(0x1e, 1, 20, 0x0c),
+    T_HORZ_REPT(0x20, 0, 7, 0x03),
+    T_HORZ_REPT(0x20, 0, 20, 0x0c),
+    T_ONE(31, 7, 0x0f),
     A_HORZ(0x3, 22, 14, A_BR(BG_PALETTE_GREEN), A_BL(BG_PALETTE_GREEN) | A_BR(BG_PALETTE_GREEN), A_BL(BG_PALETTE_GREEN)),
     A_HORZ(0x3, 22, 16, A_TR(BG_PALETTE_GREEN), A_TL(BG_PALETTE_GREEN) | A_TR(BG_PALETTE_GREEN), A_TL(BG_PALETTE_GREEN)),
     NT_UPD_EOF
@@ -239,36 +241,39 @@ struct Star {
 #define SOA_MEMBERS MEMBER(x) MEMBER(y) MEMBER(x_vel) MEMBER(y_vel) MEMBER(attr) MEMBER(tile)
 #include <soa-struct.inc>
 
-    // -0.375_s8_8,
-    // -0.875_s8_8,
-    // -1.875_s8_8,
 FIXED constexpr const uint8_t STAR_X_VELOCITY_HI[] = {
     ((uint16_t)((-0.75_s8_8).get()) >> 8) & 0xff,
     ((uint16_t)((-1.75_s8_8).get()) >> 8) & 0xff,
+    ((uint16_t)((-2.75_s8_8).get()) >> 8) & 0xff,
     ((uint16_t)((-3.75_s8_8).get()) >> 8) & 0xff,
 };
 FIXED constexpr const uint8_t STAR_X_VELOCITY_LO[] = {
     ((uint16_t)((-0.75_s8_8).get())) & 0xff,
     ((uint16_t)((-1.75_s8_8).get())) & 0xff,
+    ((uint16_t)((-2.75_s8_8).get())) & 0xff,
     ((uint16_t)((-3.75_s8_8).get())) & 0xff,
 };
 FIXED constexpr const uint8_t STAR_Y_VELOCITY_HI[] = {
     ((uint16_t)((0.75_s8_8).get()) >> 8) & 0xff,
     ((uint16_t)((1.75_s8_8).get()) >> 8) & 0xff,
+    ((uint16_t)((2.75_s8_8).get()) >> 8) & 0xff,
     ((uint16_t)((3.75_s8_8).get()) >> 8) & 0xff,
 };
 FIXED constexpr const uint8_t STAR_Y_VELOCITY_LO[] = {
     ((uint16_t)((0.75_s8_8).get())) & 0xff,
     ((uint16_t)((1.75_s8_8).get())) & 0xff,
+    ((uint16_t)((2.75_s8_8).get())) & 0xff,
     ((uint16_t)((3.75_s8_8).get())) & 0xff,
 };
 FIXED constexpr const uint8_t STAR_TILE_LUT[] = {
     0x01,
     0x09,
-    0x0f
+    0x09,
+    0x0f,
 };
 FIXED constexpr const uint8_t STAR_ATTR_LUT[] = {
     3,
+    2,
     2,
     1,
 };
@@ -292,18 +297,24 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
     for (uint8_t i = 31; i < 128; i--) {
         star_x_hi[i] = (rand() & 0xff);
         star_y_hi[i] = (rand() & 0xff);
-        uint8_t type = (rand() & 0x3) % 3;
+        uint8_t type = rand() & 0x03;
         star_type[i] = type;
     }
 
+    OAM_BUF[0] = 55;
+    OAM_BUF[1] = 0xf;
+    OAM_BUF[2] = 0x0;
+    OAM_BUF[3] = 248;
+    SPRID += 4;
+
     ppu_wait_nmi();
     ppu_on_all();
-    pal_fade_to(0, 4, 2);
+    pal_fade(true);
     while (true) {
         ppu_wait_nmi();
         oam_clear();
 
-        OAM_BUF[0] = 56;
+        OAM_BUF[0] = 55;
         OAM_BUF[1] = 0xf;
         OAM_BUF[2] = 0x0;
         OAM_BUF[3] = 248;
@@ -312,6 +323,7 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
         auto input = pad_trigger(0);
         // move the stars
         for (uint8_t i = 31; i < 128; i--) {
+            // uint8_t boost = star_type[i] & 0b11111100;
             uint8_t type = star_type[i];
             Word x_pos{.lo = star_x_lo[i], .hi = star_x_hi[i]};
             Word x_vel{.lo = STAR_X_VELOCITY_LO[type], .hi = STAR_X_VELOCITY_HI[type]};
@@ -326,17 +338,54 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
             star_y_lo[i] = y_res.lo;
             star_y_hi[i] = y_res.hi;
 
-            auto real_y = star_y_hi[i] > 48 && star_y_hi[i] < 164 ? 255 : star_y_hi[i];
+            if (star_y_hi[i] > 250) {
+                star_x_hi[i] = (rand() & 0xff);
+                star_type[i] = rand() & 0x03;
+            }
+        }
+        // wait for sprite zero
+        DEBUGGER();
+        while (!(PEEK(0x2002) & 0x40));
+        // Fixed delay for waiting to disable sprites
+        delay_256a_x_33_clocks(1, 0x30);
+        POKE(0x2001, PPUMASK_VAR & (~0b00010000));
+        delay_256a_x_33_clocks(1, 0x85);
+        POKE(0x2001, PPUMASK_VAR | (0b00010000));
+
+        // NOTE: THIS MUST BE CONSTANT TIME
+        for (uint8_t i = 31; i < 128; i--) {
+            uint8_t type = star_type[i];
+            // auto real_y = star_y_hi[i] > 56 && star_y_hi[i] < 164 ? 255 : star_y_hi[i];
+            uint8_t real_y;
+            __asm__(R"ASM(
+                cmp #56 - 1  ; 2   2
+                bcc .L1      ; 2-3 4
+                cmp #157   ; 2   6
+                bcs .L2      ; 2-3 8
+                lda #$ff     ; 2   10
+                jmp .Exit    ; 3   13
+            .L1:
+                nop          ; 2   7
+                nop          ; 2   9
+            .L2:
+                nop          ; 2   11
+                nop          ; 2   13
+            .Exit:
+                )ASM"
+                : "=a"(real_y)
+                : "a"(star_y_hi[i])
+                : "p"
+            );
             OAM_BUF[SPRID + 0] = real_y;
             OAM_BUF[SPRID + 3] = star_x_hi[i];
             OAM_BUF[SPRID + 1] = STAR_TILE_LUT[type];
             OAM_BUF[SPRID + 2] = STAR_ATTR_LUT[type];
             SPRID += 4;
-
-            if (star_y_hi[i] > 250) {
-                star_x_hi[i] = (rand() & 0xff);
-            }
         }
+        delay_256a_x_33_clocks(0x16, 0xa0);
+        POKE(0x2001, PPUMASK_VAR & (~0b00010000));
+        delay_256a_x_33_clocks(0x4, 0x90);
+        POKE(0x2001, PPUMASK_VAR | (0b00010000));
         if (!password_input) {
             if (input & (PAD_START | PAD_A | PAD_B | PAD_SELECT)) {
                 break;
@@ -345,6 +394,7 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
         } else if (!cursor->is_moving) {
             // password input options
             if (input & PAD_SELECT) {
+                pal_fade(false);
                 set_game_mode(MODE_RESET);
                 return;
             }
@@ -357,7 +407,7 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
                     if (xhi == input_password[0] && xlo == input_password[1]
                         && yhi == input_password[2] && ylo == input_password[3]) {
                         // success!
-                        pal_fade_to(4, 2, 2);
+                        pal_fade(false);
                         ppu_off();
                         level = i;
                         set_game_mode(MODE_LOAD_LEVEL);
@@ -404,7 +454,7 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
             cursor.timer--;
         }
     }
-    pal_fade_to(4, 2, 2);
+    pal_fade(false);
     ppu_off();
     vram_adr(NAMETABLE_A);
     vram_fill(0, 0x400);
@@ -461,21 +511,19 @@ void game_mode_enter_password() {
     }
 
     update_starfield(true);
-    // ppu_on_all();
-    // pal_fade_to(0, 2, 2);
-    // pal_fade_to(4, 0, 2);
-    // ppu_off();
 }
 
-void game_mode_load_level() {
-
-    
+static void reset_cursors() {
 constexpr uint8_t X_LO_BOUND = (10 * 8);
 constexpr uint8_t Y_LO_BOUND = (22 * 8);
     auto cursor = objects[SLOT_MAINCURSOR];
     cursor.is_moving = false;
     cursor.x = X_LO_BOUND;
+    cursor.target_x = X_LO_BOUND;
     cursor.y = Y_LO_BOUND;
+    cursor.target_y = Y_LO_BOUND;
+    cursor.x_vel = 0;
+    cursor.y_vel = 0;
     cursor.state = 16;
     cursor.anim_state = 16;
     cursor.long_timer = 4;
@@ -486,6 +534,8 @@ constexpr uint8_t Y_LO_BOUND = (22 * 8);
 
     auto cmdcursor = objects[SLOT_CMDCURSOR];
     cmdcursor.is_moving = false;
+    cursor.x_vel = 0;
+    cursor.y_vel = 0;
     cmdcursor.state = 16;
     cmdcursor.anim_state = 16;
     // Reset level variables
@@ -493,6 +543,10 @@ constexpr uint8_t Y_LO_BOUND = (22 * 8);
     command_index[0] = 0;
     command_index[1] = 12;
     command_index[2] = 12 + 9;
+}
+
+void game_mode_load_level() {
+    reset_cursors();
     memset(commands, 0, sizeof(commands));
     memset(pickup_list, 0xff, sizeof(pickup_list));
 
@@ -555,17 +609,12 @@ void game_mode_edit() {
     if (prev_mode != MODE_EDIT && prev_mode != MODE_EXECUTE) {
         prev_mode = MODE_EDIT;
         ppu_on_all();
-        pal_fade_to(0, 4, 4);
+        pal_fade(true);
     }
     game_mode_edit_main();
 }
 
 void game_mode_execute() {
-    // if (prev_mode != MODE_EDIT) {
-    //     prev_mode = MODE_EDIT;
-    //     ppu_on_all();
-    //     pal_fade_to(0, 4, 4);
-    // }
 
     // i dare you to inline this llvm-mos. bring it on.
     game_mode_execute_main();
@@ -606,6 +655,7 @@ int main() {
 
         switch (game_mode) {
         case MODE_RESET:
+            reset_cursors();
             // game_mode = MODE_LOAD_LEVEL;
             // break;
             // fallthrough

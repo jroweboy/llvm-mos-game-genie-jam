@@ -114,11 +114,16 @@ void draw_cursor(uint8_t slot) {
     SPRID += 16;
 }
 
-void pal_fade_to(char from, char to, char duration) {
+extern "C" constinit const uint8_t fade_from_lut[2] = { 4, 0 };
+extern "C" constinit const uint8_t fade_to_lut[2] = { 0, 4 };
+
+void pal_fade(bool fade_in) {
+    int8_t from = fade_from_lut[fade_in];
+    int8_t to = fade_to_lut[fade_in];
     while (from != to) {
         from = (from < to) ? from + 1 : from - 1;
         pal_bright(from);
-        delay(duration);
+        delay(2);
     }
     // Wait one additional frame to make sure the last fade happens before exiting
     ppu_wait_nmi();

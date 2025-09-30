@@ -143,9 +143,16 @@ const uint8_t level_hud_2[] = {
     NT_UPD_EOF
 };
 
+constinit const Metatile speed_tile_lut[3] = {
+    ONE, TWO, FOUR,
+};
+constinit const uint8_t speed_attr_lut[3] = {
+    BG_PALETTE_BLUE, BG_PALETTE_GREEN, BG_PALETTE_RED,
+};
+
 void update_speed_setting() {
-    Metatile mtile = is_twox_speed ? TWO : ONE;
-    uint8_t pal = is_twox_speed ? BG_PALETTE_GREEN : BG_PALETTE_BLUE;
+    Metatile mtile = speed_tile_lut[speed_setting];
+    uint8_t pal = speed_attr_lut[speed_setting];
     draw_metatile_2_2(Nametable::A, 28, 26, mtile);
     update_attribute(26, 26, pal);
     update_attribute(28, 26, pal);

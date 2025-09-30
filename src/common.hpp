@@ -43,6 +43,7 @@ enum Metatile {
     SEPARATOR,
     SMALL_X,
     PORTAL,
+    FOUR,
     METATILE_COUNT,
 };
 
@@ -128,6 +129,8 @@ extern GameMode game_mode;
 
 void set_game_mode(GameMode game_mode);
 
+extern "C" void delay_a_27_clocks(uint8_t a);
+extern "C" void delay_256a_x_33_clocks(uint8_t a, uint8_t x);
 
 
 extern uint8_t VRAM_BUF[128];

@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-__attribute__((leaf)) void pal_fade_to(char from, char to, char duration);
+__attribute__((leaf)) void pal_fade(bool fade_in);
 
 extern "C" void draw_cursor(uint8_t slot);
 extern "C" void draw_player();

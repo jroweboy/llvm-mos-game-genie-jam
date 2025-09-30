@@ -71,26 +71,26 @@ SPLIT_ARRAY_IMPL(all_levels,
     LEVEL_FINAL
 );
 
-// extern const uint8_t LEVEL_FREEBIE[] = {
-//     L_ONE(LevelObjType::PICKUP, 5, 1),
-//     L_PLAYER(Facing::Up, 5, 5),
-//     L_CMD_MAIN(3),
-//     PACK(CMD_MOVE, CMD_MOVE), PACK(CMD_MOVE, CMD_MOVE),
-//     PACK(CMD_PICKUP, CMD_END),
-//     L_END,
-// };
-
 extern const uint8_t LEVEL_FREEBIE[] = {
     L_ONE(LevelObjType::PICKUP, 5, 1),
     L_PLAYER(Facing::Up, 5, 5),
-    L_CMD_TWO(1),
+    L_CMD_MAIN(3),
+    PACK(CMD_MOVE, CMD_MOVE), PACK(CMD_MOVE, CMD_MOVE),
     PACK(CMD_PICKUP, CMD_END),
-    L_CMD_ONE(2),
-    PACK(CMD_MOVE, CMD_MOVE), PACK(CMD_END, CMD_END),
-    L_CMD_MAIN(2),
-    PACK(CMD_JMP_ONE, CMD_JMP_ONE), PACK(CMD_JMP_TWO, CMD_END),
     L_END,
 };
+
+// extern const uint8_t LEVEL_FREEBIE[] = {
+//     L_ONE(LevelObjType::PICKUP, 5, 1),
+//     L_PLAYER(Facing::Up, 5, 5),
+//     L_CMD_TWO(1),
+//     PACK(CMD_PICKUP, CMD_END),
+//     L_CMD_ONE(2),
+//     PACK(CMD_MOVE, CMD_MOVE), PACK(CMD_END, CMD_END),
+//     L_CMD_MAIN(2),
+//     PACK(CMD_JMP_ONE, CMD_JMP_ONE), PACK(CMD_JMP_TWO, CMD_END),
+//     L_END,
+// };
 
 extern const uint8_t LEVEL_SLIGHTLY_LESS_FREE[] = {
     L_ONE(LevelObjType::PICKUP, 5, 1),

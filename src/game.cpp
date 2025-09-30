@@ -1,7 +1,6 @@
 
 #include <string.h>
 #include <cstdint>
-#include "fixed_point2.hpp"
 #include <nesdoug.h>
 #include <soa.h>
 
@@ -31,7 +30,7 @@ uint8_t commands[12 + 9 + 9];
 uint8_t command_index[3];
 uint8_t pickup_list[8];
 uint8_t current_sub;
-bool is_twox_speed;
+uint8_t speed_setting;
 
 
 constinit FIXED const uint8_t sub_attr_y_lut[] = { 2, 12, 20 };
@@ -161,7 +160,7 @@ static void draw_command() {
 
 void update_command_list(uint8_t new_command) {
     if (new_command == Command::CMD_RETURN) {
-        is_twox_speed = !is_twox_speed;
+        wrapped_inc(speed_setting, 3);
         update_speed_setting();
         return;
     }
@@ -212,41 +211,6 @@ void move_object(uint8_t slot) {
             object.y_vel = MMIN((object->target_y - object->y) >> 2, maximum_velocity);
     }
 }
-
-// void move_cursor(uint8_t slot) {
-//     auto cursor = cursors[slot];
-//     if (cursor->x < cursor->target_x) {
-//         cursor.x = cursor->x + cursor->x_vel;
-//         if (cursor->x > cursor->target_x)
-//             cursor.x = cursor->target_x;
-//     } else if (cursor->x > cursor->target_x) {
-//         cursor.x = cursor->x + cursor->x_vel;
-//         if (cursor->x < cursor->target_x)
-//             cursor.x = cursor->target_x;
-//     }
-//     if (cursor->y < cursor->target_y) {
-//         cursor.y = cursor->y + cursor->y_vel;
-//         if (cursor->y > cursor->target_y)
-//             cursor.y = cursor->target_y;
-//     } else if (cursor->y > cursor->target_y) {
-//         cursor.y = cursor->y + cursor->y_vel;
-//         if (cursor->y < cursor->target_y)
-//             cursor.y = cursor->target_y;
-//     }
-//     if (cursor->x == cursor->target_x && cursor->y == cursor->target_y) {
-//         cursor.is_moving = false;
-//     }
-    
-//     if (cursor->x_vel < -minimum_velocity)
-//         cursor.x_vel = MMAX((cursor->target_x - cursor->x) >> 2, -maximum_velocity);
-//     else if (cursor->x_vel > minimum_velocity)
-//         cursor.x_vel = MMIN((cursor->target_x - cursor->x) >> 2, maximum_velocity);
-    
-//     if (cursor->y_vel < -minimum_velocity)
-//         cursor.y_vel = MMAX((cursor->target_y - cursor->y) >> 2, -maximum_velocity);
-//     else if (cursor->y_vel >= minimum_velocity)
-//         cursor.y_vel = MMIN((cursor->target_y - cursor->y) >> 2, maximum_velocity);
-// }
 
 constexpr uint8_t X_LO_BOUND = (10 * 8);
 constexpr uint8_t X_HI_BOUND = (14 * 8);
@@ -474,30 +438,15 @@ void game_mode_edit_main() {
 }
 
 constexpr int8_t MOVE_SPEED = 1;
-constexpr int8_t TWOX_MOVE_SPEED = 2;
-constinit FIXED const int8_t x_movement_velocity[4] = {
-    0,
-    MOVE_SPEED,
-    0,
-    -MOVE_SPEED,
+constinit FIXED const int8_t x_movement_velocity[12] = {
+    0, MOVE_SPEED, 0, -MOVE_SPEED,
+    0, 2 * MOVE_SPEED, 0, 2 * -MOVE_SPEED,
+    0, 4 * MOVE_SPEED, 0, 4 * -MOVE_SPEED,
 };
-constinit FIXED const int8_t y_movement_velocity[4] = {
-    -MOVE_SPEED,
-    0,
-    MOVE_SPEED,
-    0,
-};
-constinit FIXED const int8_t twox_movement_velocity[4] = {
-    0,
-    TWOX_MOVE_SPEED,
-    0,
-    -TWOX_MOVE_SPEED,
-};
-constinit FIXED const int8_t twoy_movement_velocity[4] = {
-    -TWOX_MOVE_SPEED,
-    0,
-    TWOX_MOVE_SPEED,
-    0,
+constinit FIXED const int8_t y_movement_velocity[12] = {
+    -MOVE_SPEED, 0, MOVE_SPEED, 0,
+    2 * -MOVE_SPEED, 0, 2 * MOVE_SPEED, 0,
+    4 * -MOVE_SPEED, 0, 4 * MOVE_SPEED, 0,
 };
 
 constinit FIXED const int8_t x_movement[4] = {
@@ -533,12 +482,9 @@ static bool execute_action(uint8_t slot) {
         if (ttype == LevelObjType::SOLID_WALL) {
             break;
         }
-        obj.x_vel = (is_twox_speed)
-            ? twox_movement_velocity[obj->facing_dir]
-            : x_movement_velocity[obj->facing_dir];
-        obj.y_vel = (is_twox_speed)
-            ? twoy_movement_velocity[obj->facing_dir]
-            : y_movement_velocity[obj->facing_dir];
+        uint8_t offset = obj->facing_dir + 4 * speed_setting;
+        obj.x_vel = x_movement_velocity[offset];
+        obj.y_vel = y_movement_velocity[offset];
         obj.target_x = target.x - 8;
         obj.target_y = target.y - 8;
         break;
@@ -595,6 +541,9 @@ static bool execute_action(uint8_t slot) {
     return false;
 }
 
+constinit const uint8_t base_frame_pacing_lut[3] = {
+    30, 15, 7
+};
 void game_mode_execute_main() {
     auto cmdcursor = objects[2];
     cmdcursor.is_moving = true;
@@ -624,9 +573,7 @@ void game_mode_execute_main() {
 
     clear_command_string(false);
 
-    uint8_t base_frame_length = 30;
-    if (is_twox_speed)
-        base_frame_length = 15;
+    uint8_t base_frame_length = base_frame_pacing_lut[speed_setting];
     delay(base_frame_length);
 
     // wait a bit before starting
