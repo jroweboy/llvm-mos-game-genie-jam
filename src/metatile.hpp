@@ -48,8 +48,8 @@ struct Metatile_4_4 {
 
 extern const soa::Array<Metatile_2_2, Metatile::METATILE_COUNT> metatiles;
 extern uint8_t attribute_buffer[0x40];
-void write_attribute(uint8_t tile_x, uint8_t tile_y, uint8_t attr);
-void update_attribute(uint8_t tile_x, uint8_t tile_y, uint8_t attr);
+extern void write_all_attributes();
+void update_attribute(uint8_t tile_x, uint8_t tile_y, uint8_t attr, bool buffer_update = true);
 
 /**
  * @brief Metatile draw routines - buffers a draw to the VRAM_BUF for metatiles.

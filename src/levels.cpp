@@ -28,14 +28,17 @@ void timed_wall_change_color(uint8_t slot, uint8_t pal) {
     auto lendir = obj.facing_dir.get();
 
     auto len = (uint8_t)(lendir & ~(L_VERTICAL));
-    if (lendir & L_VERTICAL)
-        for (uint8_t i = 0; i < len; ++i) {
-            update_attribute(obj->x, obj->y + i * 2, pal);
+    uint8_t x = obj->x;
+    uint8_t y = obj->y;
+    for (uint8_t i = 0; i < len; ++i) {
+        update_attribute(x, y, pal);
+        if (lendir & L_VERTICAL) {
+            y += 2;
+        } else {
+            x += 2;
         }
-    else
-        for (uint8_t i = 0; i < len; ++i) {
-            update_attribute(obj->x + i * 2, obj->y, pal);
-        }
+        flush_vram_update2();
+    }
 }
 
 static void create_timed_wall_obj(uint8_t slot, uint8_t lendir, uint8_t x, uint8_t y) {
@@ -86,33 +89,33 @@ extern "C" LevelObjType load_metatile_at_coord(uint8_t px_x, uint8_t px_y) {
     }
 }
 
-static void create_wall(uint8_t *current_level, uint8_t slot) {
+void level_draw_wall(uint8_t x, uint8_t y, uint8_t lendir, LevelObjType type) {
     auto metatile = Metatile::WALL;
+    auto len = (uint8_t)(lendir & ~(L_VERTICAL));
+    for (uint8_t i=0; i<len; i++) {
+        update_level_buff(x, y, type);
+        draw_metatile_2_2(Nametable::A, x, y, metatile);
+        if (lendir & L_VERTICAL) {
+            y += 2;
+        } else {
+            x += 2;
+        }
+    }
+}
+
+static void create_wall(uint8_t *current_level, uint8_t slot) {
+    auto type = slot ? LevelObjType::TIMED_WALL : LevelObjType::SOLID_WALL;
     auto [x, y] = read_pos(current_level);
     auto orig_x = x;
     auto orig_y = y;
     auto lendir = 1;
     if (cmd & L_MULTIPLE) {
         lendir = current_level[level_offset++];
-        auto len = (uint8_t)(lendir & ~(L_VERTICAL));
-        for (uint8_t i=0; i<len; i++) {
-            if (slot)
-                update_level_buff(x, y, LevelObjType::TIMED_WALL);
-            else
-                update_level_buff(x, y, LevelObjType::SOLID_WALL);
-            draw_metatile_2_2(Nametable::A, x, y, metatile);
-            if (lendir & L_VERTICAL) {
-                y += 2;
-            } else {
-                x += 2;
-            }
-        }
+        level_draw_wall(x, y, lendir, type);
     } else {
-        if (slot)
-            update_level_buff(x, y, LevelObjType::TIMED_WALL);
-        else
-            update_level_buff(x, y, LevelObjType::SOLID_WALL);
-        draw_metatile_2_2(Nametable::A, x, y, metatile);
+        level_draw_wall(x, y, 1, type);
+        // update_level_buff(x, y, type);
+        // draw_metatile_2_2(Nametable::A, x, y, metatile);
     }
     if (slot)
         create_timed_wall_obj(slot, lendir, orig_x, orig_y);
@@ -166,6 +169,10 @@ void draw_hud([[maybe_unused]] uint8_t level_num) {
     set_vram_update(level_hud);
     flush_vram_update2();
     set_vram_update(level_hud_2);
+    attribute_buffer[0xea-0xc0] = 0xc0;
+    attribute_buffer[0xeb-0xc0] = 0x90;
+    attribute_buffer[0xf2-0xc0] = 0x80;
+    attribute_buffer[0xf3-0xc0] = 0x7c;
     flush_vram_update2();
     set_vram_buffer();
     update_speed_setting();
@@ -173,13 +180,13 @@ void draw_hud([[maybe_unused]] uint8_t level_num) {
 }
 
 static inline uint8_t find_obj_slot() {
-    for (int i=1; i<8; i++) {
+    for (int i=3; i<10; i++) {
         auto obj = objects[i];
         if (obj->type == NO_OBJECT) {
             return i;
         }
     }
-    return 1;
+    return 3;
 }
 
 static void add_command(uint8_t* current_level) {
@@ -220,6 +227,7 @@ void load_level(uint8_t level_num) {
         switch (static_cast<LevelObjType>(cmd & 0x0f)) {
         case LevelObjType::TERMINATOR:
             return;
+        case LevelObjType::HURT_WALL:
         case LevelObjType::TIMED_WALL: {
             auto slot = find_obj_slot();
             create_wall(current_level, slot);

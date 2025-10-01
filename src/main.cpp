@@ -153,24 +153,20 @@ void draw_title_screen(uint8_t idx) {
     uint8_t i = 0;
     uint8_t cmd;
     while ((cmd = screen[i++])) {
+        uint8_t x = screen[i++];
+        uint8_t y = screen[i++];
         if (cmd == DRAW_STRING) {
-            uint8_t x = screen[i++];
-            uint8_t y = screen[i++];
             uint8_t len = screen[i];
             render_string(Nametable::A, x, y, (const Letter*)&screen[i]);
             i += len;
         } else if (cmd == DRAW_CURSOR) {
             title_screen_draw_cursor = true;
-            uint8_t x = screen[i++];
-            uint8_t y = screen[i++];
             auto cursor = objects[SLOT_MAINCURSOR];
             cursor.long_timer = 4;
             cursor.x = x;
             cursor.y = y;
         } else if (cmd <= DRAW_PLAYER_LEFT) {
             title_screen_draw_player = true;
-            uint8_t x = screen[i++];
-            uint8_t y = screen[i++];
             uint8_t direction = cmd - DRAW_PLAYER_UP;
             auto obj = objects[0];
             obj.facing_dir = direction;
@@ -179,14 +175,13 @@ void draw_title_screen(uint8_t idx) {
         } else {
             auto idx = VRAM_INDEX;
             VRAM_BUF[idx + 0] = cmd;
-            VRAM_BUF[idx + 1] = screen[i++];
-            uint8_t len = screen[i++];
-            VRAM_BUF[idx + 2] = len;
+            VRAM_BUF[idx + 1] = x;
+            VRAM_BUF[idx + 2] = y;
             uint8_t l = 0;
-            while (l++ < len) {
+            while (l++ < y) {
                 VRAM_BUF[idx + 2 + l] = screen[i++];
             }
-            VRAM_INDEX += len + 3;
+            VRAM_INDEX += y + 3;
             VRAM_BUF[VRAM_INDEX] = 0xff;
         }
         flush_vram_update2();
@@ -323,6 +318,33 @@ extern volatile char PPUMASK_VAR;
 extern __zp unsigned char SPRID;
 extern char OAM_BUF[256];
 
+// Putting these calls in a separate function keeps llvm-mos
+// from putting the delay function parameters in a register
+// and lets it use immediate loads instead, saving a bunch of time and space
+__attribute__((noinline)) static void delay_and_hide_sprites() {
+    while (!(PEEK(0x2002) & 0x40))
+        ;
+    // Fixed delay for waiting to disable sprites
+    constexpr uint8_t delay_a1 = 0x01;
+    constexpr uint8_t delay_x1 = 0x28;
+    delay_256a_x_33_clocks(delay_a1, delay_x1);
+    POKE(0x2001, PPUMASK_VAR & (~0b00010000));
+    constexpr uint8_t delay_a2 = 0x03;
+    constexpr uint8_t delay_x2 = 0xb8;
+    delay_256a_x_33_clocks(delay_a2, delay_x2);
+    POKE(0x2001, PPUMASK_VAR | (0b00010000));
+    constexpr uint8_t delay_a3 = 0x25;
+    constexpr uint8_t delay_x3 = 0x70;
+    delay_256a_x_33_clocks(delay_a3, delay_x3);
+    POKE(0x2001, PPUMASK_VAR & (~0b00010000));
+    constexpr uint8_t delay_a4 = 0x03;
+    constexpr uint8_t delay_x4 = 0x48;
+    delay_256a_x_33_clocks(delay_a4, delay_x4);
+    POKE(0x2001, PPUMASK_VAR | (0b00010000));
+}
+
+static bool victory_mode;
+
 __attribute__((cold)) static void update_starfield(bool password_input) {
     // uint8_t star_x_lo[32];
     uint8_t star_x[32];
@@ -391,28 +413,9 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
                 star_type[i] = rand() & 0x03;
             }
         }
-        
-        while (!(PEEK(0x2002) & 0x40))
-            ;
-        // Fixed delay for waiting to disable sprites
-        constexpr uint8_t delay_a1 = 0x01;
-        constexpr uint8_t delay_x1 = 0x28;
-        delay_256a_x_33_clocks(delay_a1, delay_x1);
-        POKE(0x2001, PPUMASK_VAR & (~0b00010000));
-        constexpr uint8_t delay_a2 = 0x03;
-        constexpr uint8_t delay_x2 = 0xb8;
-        delay_256a_x_33_clocks(delay_a2, delay_x2);
-        POKE(0x2001, PPUMASK_VAR | (0b00010000));
-        constexpr uint8_t delay_a3 = 0x25;
-        constexpr uint8_t delay_x3 = 0x70;
-        delay_256a_x_33_clocks(delay_a3, delay_x3);
-        POKE(0x2001, PPUMASK_VAR & (~0b00010000));
-        constexpr uint8_t delay_a4 = 0x03;
-        constexpr uint8_t delay_x4 = 0x48;
-        delay_256a_x_33_clocks(delay_a4, delay_x4);
-        POKE(0x2001, PPUMASK_VAR | (0b00010000));
 
         // wait for sprite zero
+        delay_and_hide_sprites();
 
         // NOTE: THIS MUST BE CONSTANT TIME (not true anymore?)
         // for (uint8_t i = 31; i < 128; i--) {
@@ -443,7 +446,7 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
         //     SPRID += 4;
         // }
         if (!password_input) {
-            if (input & (PAD_START | PAD_A | PAD_B | PAD_SELECT)) {
+            if (input & (PAD_START | PAD_A | PAD_B | PAD_SELECT) && !victory_mode) {
                 break;
             }
             continue;
@@ -574,6 +577,7 @@ static void reset_cursors() {
 constexpr uint8_t X_LO_BOUND = (10 * 8);
 constexpr uint8_t Y_LO_BOUND = (22 * 8);
     auto cursor = objects[SLOT_MAINCURSOR];
+    cursor.type = CURSOR;
     cursor.is_moving = false;
     cursor.x = X_LO_BOUND;
     cursor.target_x = X_LO_BOUND;
@@ -590,9 +594,10 @@ constexpr uint8_t Y_LO_BOUND = (22 * 8);
     cursor.facing_dir = 0;
 
     auto cmdcursor = objects[SLOT_CMDCURSOR];
+    cmdcursor.type = CURSOR;
     cmdcursor.is_moving = false;
-    cursor.x_vel = 0;
-    cursor.y_vel = 0;
+    cmdcursor.x_vel = 0;
+    cmdcursor.y_vel = 0;
     cmdcursor.state = 16;
     cmdcursor.anim_state = 16;
     // Reset level variables
@@ -602,13 +607,25 @@ constexpr uint8_t Y_LO_BOUND = (22 * 8);
     command_index[2] = 12 + 9;
 }
 
+void game_mode_victory_screen() {
+    draw_starscreen();
+    
+    render_string(Nametable::A, 1, 9, "CONGRATULATIONS"_l);
+    render_string(Nametable::A, 7, 12, "HOPE YOU"_l);
+    render_string(Nametable::A, 7, 15, "LIKED IT"_l);
+    victory_mode = true;
+    update_starfield(false);
+}
+
 void game_mode_load_level() {
     reset_cursors();
     memset(commands, 0, sizeof(commands));
     memset(pickup_list, 0xff, sizeof(pickup_list));
 
+    // SKIP drawing the next level screen if we are testing levels
     // draw the next level screen
     draw_starscreen();
+#ifndef TEST_LEVEL_SOLUTION
 
     const Letter* title = (const Letter*)SPLIT_ARRAY_POINTER(level_titles, level);
 
@@ -632,7 +649,7 @@ void game_mode_load_level() {
     render_string(Nametable::A, 22, 15, pass);
 
     update_starfield(false);
-
+#endif
     // if (prev_mode != MODE_LOAD_LEVEL && prev_mode != MODE_EDIT && prev_mode != MODE_EXECUTE) {
     //     prev_mode = MODE_LOAD_LEVEL;
     draw_hud(level);
@@ -702,6 +719,10 @@ int main() {
     scroll(0, 0);
     // Turn on the screen, showing both the background and sprites
     // ppu_on_all();
+    
+#ifdef TEST_LEVEL_SOLUTION
+    speed_setting = 0;
+#endif
 
     // Now time to start the main game loop
     while (true) {
@@ -712,14 +733,20 @@ int main() {
 
         switch (game_mode) {
         case MODE_RESET:
+#ifdef TEST_LEVEL_SOLUTION
+            game_mode = MODE_LOAD_LEVEL;
+            break;
+#else
             reset_cursors();
-            // game_mode = MODE_LOAD_LEVEL;
-            // break;
+#endif
             // fallthrough
         case MODE_TITLE:
             game_mode_title();
             break;
         case MODE_LOAD_LEVEL:
+            if (level == LEVEL_COUNT) {
+                game_mode_victory_screen();
+            }
             game_mode_load_level();
             break;
         case MODE_EDIT:

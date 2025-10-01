@@ -14,6 +14,8 @@ enum Command {
     CMD_RETURN,
     CMD_JMP_ONE,
     CMD_JMP_TWO,
+    CMD_ERROR,
+    CMD_YIELD,
     CMD_END, // used when storing level data to signal we finished the commands
 };
 
@@ -88,7 +90,7 @@ extern const uint8_t command_attr_lut[9];
 extern uint8_t commands[12 + 9 + 9];
 extern uint8_t command_index[3];
 extern uint8_t current_sub;
-extern uint8_t pickup_list[8];
+extern uint8_t pickup_list[50];
 extern uint8_t speed_setting;
 extern uint8_t pickup_count;
 
@@ -100,6 +102,4 @@ extern "C" void game_mode_execute_main();
 extern "C" void update_command_list(uint8_t new_command);
 extern "C" void set_cursor_target(uint8_t idx, Coord target);
 extern "C" void move_object(uint8_t idx);
-
-// uint8_t find_obj_slot(ObjectType t);
 

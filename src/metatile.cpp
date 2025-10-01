@@ -1,10 +1,12 @@
 
 #include <cstdint>
 
+#include <string.h>
 #include <nesdoug.h>
 #include <neslib.h>
 
 #include "metatile.hpp"
+#include "common.hpp"
 
 __attribute__((section(".prg_rom_fixed")))
 static const constexpr soa::Array<Metatile_2_3, Letter::COUNT> all_letters = {
@@ -59,7 +61,18 @@ constinit FIXED static const uint8_t attr_mask_lut[4] = {
     (uint8_t)~(0b11 << 6),
 };
 
-void update_attribute(uint8_t tile_x, uint8_t tile_y, uint8_t attr) {
+void write_all_attributes() {
+    int ppuaddr = 0x23c0 | (NT_UPD_HORZ << 8);
+    auto idx = VRAM_INDEX;
+    VRAM_BUF[idx+ 0] = MSB(ppuaddr);
+    VRAM_BUF[idx+ 1] = LSB(ppuaddr);
+    VRAM_BUF[idx+ 2] = 56;
+    memcpy(&VRAM_BUF[3], attribute_buffer, 56);
+    VRAM_BUF[idx+ 59] = 0xff;
+    VRAM_INDEX += 59;
+}
+
+void update_attribute(uint8_t tile_x, uint8_t tile_y, uint8_t attr, bool buffer_update) {
     auto idx = get_attr_idx(tile_x, tile_y);
     auto old = attribute_buffer[idx];
     uint8_t quadrant = (uint8_t)((tile_y & 2)) | ((tile_x & 2) >> 1);
@@ -70,7 +83,7 @@ void update_attribute(uint8_t tile_x, uint8_t tile_y, uint8_t attr) {
         attribute_buffer[idx] = (attribute_buffer[idx] & attr_mask_lut[quadrant]) | shifted_value;
         update_buffer = true;
     }
-    if (update_buffer) {
+    if (update_buffer && buffer_update) {
         buffer_attribute_update(idx);
     }
 }

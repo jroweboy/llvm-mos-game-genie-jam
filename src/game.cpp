@@ -28,7 +28,7 @@ soa::Array<Object, OBJECT_COUNT> objects;
 
 uint8_t commands[12 + 9 + 9];
 uint8_t command_index[3];
-uint8_t pickup_list[8];
+uint8_t pickup_list[50];
 uint8_t current_sub;
 uint8_t speed_setting;
 
@@ -84,6 +84,8 @@ extern const Letter WORD_PICKUP[] = { LETTERS_5( "GRAB" ) };
 extern const Letter WORD_RETURN[] = { LETTERS_6( "SPEED" ) };
 extern const Letter WORD_JMP_1[] = { LETTERS_7( "CALL 1" ) };
 extern const Letter WORD_JMP_2[] = { LETTERS_7( "CALL 2" ) };
+extern const Letter WORD_ERROR[] = { LETTERS_6( "ERROR" ) };
+extern const Letter WORD_YIELD[] = { LETTERS_6( "YIELD" ) };
 
 SPLIT_ARRAY(command_strings,
     WORD_TURN_LEFT,
@@ -94,7 +96,9 @@ SPLIT_ARRAY(command_strings,
     WORD_PICKUP,
     WORD_RETURN,
     WORD_JMP_1,
-    WORD_JMP_2
+    WORD_JMP_2,
+    WORD_ERROR,
+    WORD_YIELD
 );
 
 constinit FIXED const uint8_t command_to_string_lut[9] = {
@@ -133,18 +137,36 @@ Coord get_pos_from_index() {
     return t;
 }
 
+__attribute__((noinline)) static void draw_sprites() {
+    draw_player();
+    draw_cursor(SLOT_MAINCURSOR);
+    draw_cursor(SLOT_CMDCURSOR);
+}
+
+__attribute__((noinline)) static void wait_for_flush() {
+    draw_sprites();
+    ppu_wait_nmi();
+    oam_clear();
+}
+
 void update_sub_attribute(uint8_t new_val) {
     auto old_sub = current_sub;
     if (new_val == 3)
         wrapped_inc(current_sub, 3);
     else
         current_sub = new_val;
-    update_attribute(2, sub_attr_y_lut[old_sub], BG_PALETTE_TAN);
-    update_attribute(4, sub_attr_y_lut[old_sub], BG_PALETTE_TAN);
-    update_attribute(6, sub_attr_y_lut[old_sub], BG_PALETTE_TAN);
-    update_attribute(2, sub_attr_y_lut[current_sub], BG_PALETTE_BLUE);
-    update_attribute(4, sub_attr_y_lut[current_sub], BG_PALETTE_BLUE);
-    update_attribute(6, sub_attr_y_lut[current_sub], BG_PALETTE_BLUE);
+    // If we are full, just lag a frame to prevent overflowing the buffer
+    if (VRAM_INDEX > 0x30) {
+        wait_for_flush();
+    }
+    for (uint8_t x = 2; x < 8; x += 2) {
+        update_attribute(x, sub_attr_y_lut[old_sub], BG_PALETTE_TAN);
+        update_attribute(x, sub_attr_y_lut[current_sub], BG_PALETTE_BLUE);
+    }
+    // update_attribute(4, sub_attr_y_lut[old_sub], BG_PALETTE_TAN);
+    // update_attribute(6, sub_attr_y_lut[old_sub], BG_PALETTE_TAN);
+    // update_attribute(4, sub_attr_y_lut[current_sub], BG_PALETTE_BLUE);
+    // update_attribute(6, sub_attr_y_lut[current_sub], BG_PALETTE_BLUE);
 }
 
 static void draw_command() {
@@ -246,6 +268,22 @@ static void clear_command_string(bool halfclear) {
 
 static void draw_command_string(uint8_t id) {
     clear_command_string(true);
+    // check if we are trying to jump to the current sub
+    // then its a yield statement
+    if ((current_sub == 1 && id == CMD_JMP_ONE+1)
+        || (current_sub == 2 && id == CMD_JMP_TWO+1)) {
+        id = CMD_YIELD+1;
+    } else if (current_sub == 2 && id == CMD_JMP_ONE+1) {
+        id = CMD_ERROR+1;
+    }
+        // DEBUGGER();
+        // uint8_t subcmd = current_sub + CMD_JMP_ONE+1;
+        // if (subcmd == id) {
+        //     id = CMD_YIELD+1;
+        // } else if (subcmd == id - 1) {
+        //     // if we try to jump from 2 to 1 then show error
+        //     id = CMD_ERROR+1;
+        // }
     const Letter* command = (const Letter*)SPLIT_ARRAY_POINTER(command_strings, id);
     render_string(Nametable::A, 18, 22, command);
 }
@@ -286,6 +324,77 @@ static void move_cmd_cursor(uint8_t diff) {
     }
 }
 
+
+constinit static const uint8_t timed_wall_attrs[4] = {
+    BG_PALETTE_GREEN, BG_PALETTE_GREEN,
+    BG_PALETTE_BLUE,
+    BG_PALETTE_RED
+};
+constinit static const LevelObjType timed_wall_type[4] = {
+    LevelObjType::TIMED_WALL, LevelObjType::TIMED_WALL, LevelObjType::TIMED_WALL,
+    LevelObjType::HURT_WALL
+};
+
+static void run_object_continue_frame([[maybe_unused]] uint8_t slot) {
+    // DEBUGGER(slot);
+}
+
+static void update_wall_attr(uint8_t slot) {
+    auto object = objects[slot];
+    uint8_t lendir = object->facing_dir;
+    uint8_t len = lendir & 0x7f;
+    uint8_t x = object->x;
+    uint8_t y = object->y;
+    uint8_t timer = object->param2;
+    for (uint8_t i=0; i<len; i++) {
+        update_level_buff(x, y, timed_wall_type[timer]);
+        update_attribute(x, y, timed_wall_attrs[timer], false);
+        
+        if (lendir & L_VERTICAL) {
+            y += 2;
+        } else {
+            x += 2;
+        }
+    }
+    // lag a frame cuz why not
+    write_all_attributes();
+    wait_for_flush();
+}
+
+static void reset_object(uint8_t slot) {
+    auto object = objects[slot];
+    switch (object->type) {
+    case TIMED_WALL: {
+        object.param2 = 0;
+        update_wall_attr(slot);
+        // uint8_t lendir = object->facing_dir;
+        // uint8_t len = lendir & 0x7f;
+        // uint8_t x = object->x;
+        // uint8_t y = object->y;
+        // for (uint8_t i=0; i<len; i++) {
+        //     update_level_buff(x, y, timed_wall_type[0]);
+        //     update_attribute(x, y, timed_wall_attrs[0], false);
+            
+        //     if (lendir & L_VERTICAL) {
+        //         y += 2;
+        //     } else {
+        //         x += 2;
+        //     }
+        // }
+        // lag a frame cuz why not
+        write_all_attributes();
+        wait_for_flush();
+        break;
+    }
+    case PACE_ENEMY:
+        break;
+    case NO_OBJECT:
+    case PLAYER:
+    case CURSOR:
+        break;
+    }
+}
+
 void game_mode_edit_main() {
     uint8_t input_buffer[8] = { 0 };
     uint8_t read_ptr = 0;
@@ -308,6 +417,9 @@ void game_mode_edit_main() {
     cmdcursor.x = cmd_x;
     cmdcursor.y = cmd_y;
 
+    for (uint8_t i=3; i<10; i++) {
+        reset_object(i);
+    }
 
     bool prev_is_moving = false;
     draw_command_string_main_cursor();
@@ -339,6 +451,8 @@ void game_mode_edit_main() {
 
             if (input & PAD_SELECT) {
                 update_sub_attribute();
+                wait_for_flush();
+                draw_command_string_main_cursor();
                 auto target = get_pos_from_index();
                 set_cursor_target(SLOT_CMDCURSOR, target);
             }
@@ -407,12 +521,16 @@ void game_mode_edit_main() {
                 uint8_t x = (cursor->x - X_LO_BOUND) / 16;
                 uint8_t y = (cursor->y - Y_LO_BOUND) / 16;
                 uint8_t idx = x + y * 3;
-                update_command_list(cursor_command_lut[idx]);
-                auto target = get_pos_from_index();
-                set_cursor_target(SLOT_CMDCURSOR, target);
+                // don't let sub 2 jump to sub 1!
+                if (!(idx == CMD_JMP_ONE+1 && current_sub == 2)) {
+                    update_command_list(cursor_command_lut[idx]);
+                    auto target = get_pos_from_index();
+                    set_cursor_target(SLOT_CMDCURSOR, target);
+                }
             }
 
             if (input & PAD_START) {
+                draw_sprites();
                 set_game_mode(GameMode::MODE_EXECUTE);
                 return;
             }
@@ -427,9 +545,7 @@ void game_mode_edit_main() {
         if (cmdcursor->is_moving)
             move_object(SLOT_CMDCURSOR);
 
-        draw_player();
-        draw_cursor(SLOT_MAINCURSOR);
-        draw_cursor(SLOT_CMDCURSOR);
+        draw_sprites();
 
         if (cursor.timer != 0) {
             cursor.timer--;
@@ -462,6 +578,10 @@ constinit FIXED const int8_t y_movement[4] = {
     0,
 };
 
+static bool player_died;
+static bool yielded_one;
+static bool yielded_two;
+static uint8_t previous_sub;
 
 static bool execute_action(uint8_t slot) {
     // execute the current command
@@ -482,6 +602,11 @@ static bool execute_action(uint8_t slot) {
         if (ttype == LevelObjType::SOLID_WALL) {
             break;
         }
+        if (ttype == LevelObjType::HURT_WALL) {
+            // player died to the wall
+            player_died = true;
+            break;
+        }
         uint8_t offset = obj->facing_dir + 4 * speed_setting;
         obj.x_vel = x_movement_velocity[offset];
         obj.y_vel = y_movement_velocity[offset];
@@ -497,26 +622,53 @@ static bool execute_action(uint8_t slot) {
     }
     case CMD_TURN_RIGHT: {
         uint8_t val = obj.facing_dir;
-        wrapped_inc(val, 3, 0);
+        wrapped_inc(val, 4, 0);
         obj.facing_dir = val;
         break;
     }
     case CMD_JMP_ONE: {
         move_cmd_cursor(1);
-        current_sub = 1;
-        command_index[1] = 12;
+        uint8_t next_sub;
+        if (current_sub == 1) {
+            next_sub = 0;
+            yielded_one = true;
+        } else {
+            next_sub = 1;
+            if (!yielded_one) {
+                command_index[1] = 12;
+            } else {
+                yielded_one = false;
+            }
+        }
+        update_sub_attribute(next_sub);
+        current_sub = next_sub;
         auto [x, y] = get_pos_from_index();
         cmdcursor.x = x;
         cmdcursor.y = y;
+        wait_for_flush();
         break;
     }
     case CMD_JMP_TWO: {
         move_cmd_cursor(1);
-        current_sub = 2;
-        command_index[2] = 12 + 9;
+        uint8_t next_sub;
+        if (current_sub == 2) {
+            next_sub = previous_sub;
+            yielded_two = true;
+        } else {
+            previous_sub = current_sub;
+            next_sub = 2;
+            if (!yielded_two) {
+                command_index[2] = 12 + 9;
+            } else {
+                yielded_two = false;
+            }
+        }
+        update_sub_attribute(next_sub);
+        current_sub = next_sub;
         auto [x, y] = get_pos_from_index();
         cmdcursor.x = x;
         cmdcursor.y = y;
+        wait_for_flush();
         break;
     }
     case CMD_PICKUP: {
@@ -536,15 +688,44 @@ static bool execute_action(uint8_t slot) {
     case CMD_RETURN:
     case CMD_END:
     case CMD_WAIT:
+    case CMD_ERROR:
+    case CMD_YIELD:
         break;
     }
     return false;
+}
+
+
+static void run_object_new_frame(uint8_t slot) {
+    auto object = objects[slot];
+    switch (object->type) {
+    case TIMED_WALL: {
+        uint8_t timer = object.param2;
+        wrapped_inc(timer, 4);
+        object.param2 = timer;
+        update_wall_attr(slot);
+        // uint8_t lendir = object->facing_dir;
+        // uint8_t len = lendir & 0x7f;
+        // uint8_t x = object->x;
+        // uint8_t y = object->y;
+        break;
+    }
+    case PACE_ENEMY:
+        break;
+    case NO_OBJECT:
+    case PLAYER:
+    case CURSOR:
+        break;
+    }
 }
 
 constinit const uint8_t base_frame_pacing_lut[3] = {
     30, 15, 7
 };
 void game_mode_execute_main() {
+    yielded_one = false;
+    yielded_two = false;
+    previous_sub = 0;
     auto cmdcursor = objects[2];
     cmdcursor.is_moving = true;
 
@@ -554,7 +735,7 @@ void game_mode_execute_main() {
     uint8_t original_sub = current_sub;
     uint8_t original_index[3] = { command_index[0], command_index[1], command_index[2] };
 
-    current_sub = 0;
+    update_sub_attribute(0);
     command_index[0] = 0;
     command_index[1] = 0;
     command_index[2] = 0;
@@ -563,24 +744,30 @@ void game_mode_execute_main() {
     auto target = get_pos_from_index();
     set_cursor_target(SLOT_CMDCURSOR, target);
     while (cmdcursor.is_moving) {
-        ppu_wait_nmi();
         oam_clear();
-        
         move_object(SLOT_CMDCURSOR);
-        draw_cursor(SLOT_CMDCURSOR);
-        draw_player();
+        wait_for_flush();
+        
+        // draw_cursor(SLOT_CMDCURSOR);
+        // draw_player();
     }
 
     clear_command_string(false);
 
-    uint8_t base_frame_length = base_frame_pacing_lut[speed_setting];
-    delay(base_frame_length);
 
     // wait a bit before starting
+    uint8_t base_frame_length = base_frame_pacing_lut[speed_setting];
+    uint8_t delay_frames = base_frame_length;
+    while (--delay_frames) 
+        wait_for_flush();
+    // delay(base_frame_length);
+
     auto id = commands[command_index[current_sub]];
     draw_command_string(command_to_string_lut[id]);
 
     uint8_t frame_length = 1;
+
+    player_died = false;
 
     while (true) {
         ppu_wait_nmi();
@@ -594,15 +781,25 @@ void game_mode_execute_main() {
         }
 
         if (frame_length == 0) {
+            if (player_died) {
+                break;
+            }
+            // Run other objects before player
+            for (uint8_t i=3; i<10; i++) {
+                run_object_new_frame(i);
+            }
+
             uint8_t original_sub;
             do {
                 original_sub = current_sub;
                 if (execute_action(0)) {
                     // Level complete!
                     level++;
+                    pal_fade(false);
                     set_game_mode(MODE_LOAD_LEVEL);
                     return;
                 }
+
             } while (original_sub != current_sub);
             frame_length = base_frame_length;
             auto id = commands[command_index[current_sub]];
@@ -616,36 +813,45 @@ void game_mode_execute_main() {
                 // end conditions
                 break;
             } else if (command_index[current_sub] == command_lower_bound_lut[current_sub]) {
-                // return to main? should be return to prev sub...
-                // DEBUGGER();
-                current_sub = 0;
+                // work around an issue when returning from sub 2 -> 1 and the jmp command
+                // is the last instruction of sub 1
+                if (current_sub == 2 && command_index[1] == 12) {
+                    previous_sub = 0;
+                }
+                update_sub_attribute(previous_sub);
+                previous_sub = 0;
+                wait_for_flush();
             }
             
             auto target = get_pos_from_index();
             set_cursor_target(SLOT_CMDCURSOR, target);
         } else {
+            for (uint8_t i=3; i<10; i++) {
+                run_object_continue_frame(i);
+            }
             if (cmdcursor->is_moving) {
                 move_object(SLOT_CMDCURSOR);
             }
-            move_object(0);
+            move_object(SLOT_PLAYER);
             frame_length--;
         }
 
-        draw_cursor(SLOT_CMDCURSOR);
-        draw_player();
+        draw_sprites();
     }
-
 
     current_sub = original_sub;
     command_index[0] = original_index[0];
     command_index[1] = original_index[1];
     command_index[2] = original_index[2];
 
+    wait_for_flush();
     for (pickup_count=0; pickup_count<sizeof(pickup_list); ++pickup_count) {
         uint8_t p = pickup_list[pickup_count];
         if (p == 0xff) break;
         draw_pickup((Point)p);
-        ppu_wait_nmi();
+        if (pickup_count & 1) {
+            wait_for_flush();
+        }
     }
 
     memcpy((void*)&objects, original_objs, sizeof(Object) * 8);

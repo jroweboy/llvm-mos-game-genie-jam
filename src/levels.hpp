@@ -10,6 +10,7 @@ enum class LevelObjType : uint8_t {
     EMPTY = 0,
     SOLID_WALL,
     TIMED_WALL,
+    HURT_WALL,
     PICKUP,
     ENEMY,
     PLAYER,
@@ -140,3 +141,13 @@ constexpr uint8_t L_FACING_LEFT = 0b11 << 6;
 #define A_TR(atr) ((atr) << 2)
 #define A_BL(atr) ((atr) << 4)
 #define A_BR(atr) ((atr) << 6)
+
+#define UNPAREN(...) __VA_ARGS__
+#define CONCAT_IMPL(x, y) x ## y
+#define CONCAT(x, y) CONCAT_IMPL(x, y)
+#define LEVEL_IMPL(c, name,  ...) \
+    CONCAT(extern const Letter LEVEL_TITLE_, c)[] = { UNPAREN name }; \
+    CONCAT(extern const uint8_t LEVEL_DATA_, c)[] = { __VA_ARGS__ };
+
+#define NEXT_LEVEL(name, ...) \
+    LEVEL_IMPL(__COUNTER__, name, __VA_ARGS__)

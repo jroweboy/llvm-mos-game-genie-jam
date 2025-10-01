@@ -9,6 +9,8 @@
 extern "C" {
 #endif
 
+#define TEST_LEVEL_SOLUTION 1
+
 #define NT_UPD_REPT 0x80
 
 #define FIXED __attribute__((section(".prg_rom_fixed")))
@@ -143,6 +145,7 @@ extern uint8_t VRAM_INDEX;
   _DEBUGGER_1(__VA_ARGS__),\
   _DEBUGGER_0(__VA_ARGS__))
 
+
 // constexpr inline void wrapped_add(uint8_t& val, uint8_t v, uint8_t bound, uint8_t reset = 0) {
 //     val += v;
 //     if ((int8_t)val >= (int8_t)bound) {
@@ -178,9 +181,23 @@ constexpr inline void wrapped_sub(uint8_t& value, uint8_t sub_val, uint8_t lower
 
 constexpr inline void wrapped_inc(uint8_t& val, uint8_t bound, uint8_t reset = 0) {
     val++;
-    if ((int8_t)val >= (int8_t)bound) {
+    if (val >= bound) {
         val = reset;
     }
+    // __asm__(
+    //     R"ASM(
+    //         inc %0
+    //         lda %0
+    //         cmp %1
+    //         bcc %=f
+    //             lda %2
+    //             sta %0
+    //         %=:
+    //     )ASM"
+    //     : 
+    //     : "m"(val), "r"(bound), "r"(reset)
+    //     : "a", "p"
+    // );
 }
 
 constexpr inline void wrapped_dec(uint8_t& val, uint8_t bound, uint8_t reset = 0) {
