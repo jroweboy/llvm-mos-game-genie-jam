@@ -7,39 +7,6 @@
 #include "text_render.hpp"
 
 
-NEXT_LEVEL(
-    (LETTERS_15("CALL 1 FOR FUN")),
-    
-    L_PLAYER(Facing::Down, 5, 4),
-    L_MANY(LevelObjType::HURT_WALL, L_HORIZONTAL, 7, 2, 1),
-    L_MANY(LevelObjType::HURT_WALL, L_HORIZONTAL, 7, 2, 7),
-    L_MANY(LevelObjType::HURT_WALL, L_VERTICAL, 5, 2, 2),
-    L_MANY(LevelObjType::HURT_WALL, L_VERTICAL, 5, 8, 2),
-    L_ONE(LevelObjType::PICKUP, 3, 2),
-    L_ONE(LevelObjType::PICKUP, 7, 2),
-    L_ONE(LevelObjType::PICKUP, 3, 6),
-    L_ONE(LevelObjType::PICKUP, 7, 6),
-#ifdef TEST_LEVEL_SOLUTION
-    L_CMD_ONE(3),
-    PACK(CMD_MOVE, CMD_MOVE),
-    PACK(CMD_PICKUP, CMD_TURN_RIGHT),
-    PACK(CMD_MOVE, CMD_MOVE),
-    L_CMD_MAIN(4),
-    PACK(CMD_MOVE, CMD_MOVE),
-    PACK(CMD_TURN_RIGHT, CMD_JMP_ONE),
-    PACK(CMD_JMP_ONE, CMD_JMP_ONE),
-    PACK(CMD_JMP_ONE, CMD_JMP_ONE),
-#else
-    L_CMD_ONE(3),
-    PACK(CMD_MOVE, CMD_MOVE),
-    PACK(CMD_PICKUP, CMD_TURN_RIGHT),
-    PACK(CMD_MOVE, CMD_MOVE),
-    L_CMD_MAIN(1),
-    PACK(CMD_END, CMD_END),
-#endif
-    L_END,
-);
-
 
 NEXT_LEVEL(
     (LETTERS_14("ITS A FREEBIE")),
@@ -98,6 +65,56 @@ NEXT_LEVEL(
     L_END,
 );
 
+NEXT_LEVEL(
+    (LETTERS_14("TIMING IS KEY")),
+    
+    L_MANY(LevelObjType::TIMED_WALL, L_HORIZONTAL, 10, 0, 2),
+    L_ONE(LevelObjType::PICKUP, 5, 1),
+    L_PLAYER(Facing::Up, 5, 5),
+#ifdef TEST_LEVEL_SOLUTION
+    L_CMD_MAIN(3),
+    PACK(CMD_MOVE, CMD_MOVE), PACK(CMD_WAIT, CMD_MOVE),
+    PACK(CMD_MOVE, CMD_PICKUP),
+#else
+    L_CMD_MAIN(3),
+    PACK(CMD_MOVE, CMD_MOVE), PACK(CMD_MOVE, CMD_MOVE),
+    PACK(CMD_PICKUP, CMD_END),
+#endif
+    L_END,
+);
+
+NEXT_LEVEL(
+    (LETTERS_15("CALL 1 FOR FUN")),
+    
+    L_PLAYER(Facing::Down, 5, 4),
+    L_MANY(LevelObjType::HURT_WALL, L_HORIZONTAL, 7, 2, 1),
+    L_MANY(LevelObjType::HURT_WALL, L_HORIZONTAL, 7, 2, 7),
+    L_MANY(LevelObjType::HURT_WALL, L_VERTICAL, 5, 2, 2),
+    L_MANY(LevelObjType::HURT_WALL, L_VERTICAL, 5, 8, 2),
+    L_ONE(LevelObjType::PICKUP, 3, 2),
+    L_ONE(LevelObjType::PICKUP, 7, 2),
+    L_ONE(LevelObjType::PICKUP, 3, 6),
+    L_ONE(LevelObjType::PICKUP, 7, 6),
+#ifdef TEST_LEVEL_SOLUTION
+    L_CMD_ONE(3),
+    PACK(CMD_MOVE, CMD_MOVE),
+    PACK(CMD_PICKUP, CMD_TURN_RIGHT),
+    PACK(CMD_MOVE, CMD_MOVE),
+    L_CMD_MAIN(4),
+    PACK(CMD_MOVE, CMD_MOVE),
+    PACK(CMD_TURN_RIGHT, CMD_JMP_ONE),
+    PACK(CMD_JMP_ONE, CMD_JMP_ONE),
+    PACK(CMD_JMP_ONE, CMD_JMP_ONE),
+#else
+    L_CMD_ONE(3),
+    PACK(CMD_MOVE, CMD_MOVE),
+    PACK(CMD_PICKUP, CMD_TURN_RIGHT),
+    PACK(CMD_MOVE, CMD_MOVE),
+    L_CMD_MAIN(1),
+    PACK(CMD_END, CMD_END),
+#endif
+    L_END,
+);
 
 NEXT_LEVEL(
     (LETTERS_14("GRATS YOU WON")),
@@ -151,40 +168,27 @@ NEXT_LEVEL(
 //     L_END,
 // };
 
-SPLIT_ARRAY_IMPL(level_titles,
-    LEVEL_TITLE_0,
-    LEVEL_TITLE_1,
-    LEVEL_TITLE_2,
-    LEVEL_TITLE_3
-);
+#define CONCAT_LEVEL_TITLE(x) CONCAT(LEVEL_TITLE_, x)
+#define CONCAT_LEVEL_DATA(x) CONCAT(LEVEL_DATA_, x)
+#define CONCAT_LEVEL_PASSWORD(x) CONCAT(LEVEL_PASSWORD_, x)
 
-SPLIT_ARRAY_IMPL(all_levels,
-    LEVEL_DATA_0,
-    LEVEL_DATA_1,
-    LEVEL_DATA_2,
-    LEVEL_DATA_3
-);
+#define LEVEL_POINTERS_IMPL(...) \
+    SPLIT_ARRAY_IMPL(level_titles, FOR_EACH(CONCAT_LEVEL_TITLE, __VA_ARGS__) ); \
+    SPLIT_ARRAY_IMPL(all_levels, FOR_EACH(CONCAT_LEVEL_DATA, __VA_ARGS__) ); \
+    FIXED constinit const soa::Array<uint16_t, LEVEL_COUNT> level_passwords = { \
+        FOR_EACH(CONCAT_LEVEL_PASSWORD, __VA_ARGS__) \
+    };
+
+#define LEVEL_POINTERS_COUNT(n) \
+    LEVEL_POINTERS_IMPL(GENERATE_N_1(n))
+
+#define LEVEL_POINTERS() LEVEL_POINTERS_COUNT(__COUNTER__)
+
+LEVEL_POINTERS();
 
 const Letter password_alphabet[16] = {
     A, B, C, D,
     E, F, G, H,
     I, J, K, O,
     N, P, R, S
-};
-consteval static uint16_t generate_password(uint8_t lev) {
-    unsigned seed = (0xface + lev);
-    
-    unsigned x = seed;
-    x ^= x << 7;
-    x ^= x >> 9;
-    x ^= x << 8;
-    seed = x;
-    return seed;
-}
-
-FIXED constinit const soa::Array<uint16_t, LEVEL_COUNT> level_passwords = {
-    generate_password(0),
-    generate_password(1),
-    generate_password(2),
-    generate_password(3),
 };

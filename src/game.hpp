@@ -36,7 +36,7 @@ struct Object {
     uint8_t target_x;
     uint8_t target_y;
     uint8_t state; /// height for cursor
-    uint8_t frame;
+    uint8_t frame; /// 1 == disabled (dont draw if true)
     uint8_t timer;
     uint8_t long_timer;
     uint8_t anim_timer;

@@ -345,17 +345,75 @@ __attribute__((noinline)) static void delay_and_hide_sprites() {
 
 static bool victory_mode;
 
+
+static uint8_t input_password[4] = {};
+static uint8_t cursor_selected = 0;
+static uint8_t input_position = 0;
+
+__attribute__((noinline)) static void handle_password_input() {
+    auto input = pad_trigger(0);
+    auto cursor = objects[SLOT_MAINCURSOR];
+    auto inputcursor = objects[SLOT_CMDCURSOR];
+    // password input options
+    if (input & PAD_SELECT) {
+        pal_fade(false);
+        set_game_mode(MODE_RESET);
+        return;
+    }
+    if (input & PAD_START) {
+        // check all passwords for a match
+        for (uint8_t i = 0; i < 4; i++) {
+            auto password = level_passwords[i];
+            auto [xhi, xlo] = UNPACK((uint8_t)((password >> 8) & 0xff));
+            auto [yhi, ylo] = UNPACK((password >> 0) & 0xff);
+            if (xhi == input_password[0] && xlo == input_password[1]
+                && yhi == input_password[2] && ylo == input_password[3]) {
+                // success!
+                pal_fade(false);
+                ppu_off();
+                level = i;
+                set_game_mode(MODE_LOAD_LEVEL);
+                return;
+            }
+        }
+        // TODO: password bad sfx
+    }
+    if (input & PAD_A) {
+        input_password[input_position++] = cursor_selected;
+        uint8_t x = inputcursor->x >> 3;
+        uint8_t y = inputcursor->y >> 3;
+        draw_metatile_2_3(Nametable::A, x, y, password_alphabet[cursor_selected]);
+        x = inputcursor->x;
+        wrapped_add(x, 16, 160, 176 + 16*3);
+        set_cursor_target(SLOT_CMDCURSOR, Coord{ .x = x, .y= inputcursor->y});
+    }
+    if (input & PAD_B) {
+        uint8_t x = inputcursor->x;
+        wrapped_sub(x, 16, 176, 176 + 16*4);
+        set_cursor_target(SLOT_CMDCURSOR, Coord{ .x = x, .y= inputcursor->y});
+    }
+    uint8_t cursor_x = cursor->x;
+    uint8_t cursor_y = cursor->y;
+    if (input & PAD_LEFT) {
+        wrapped_sub(cursor_x, 16, 24, 152);
+    } else if (input & PAD_RIGHT) {
+        wrapped_add(cursor_x, 16, 8, 136);
+    }
+    if (input & (PAD_UP | PAD_DOWN)) {
+        cursor_y = cursor_y == 104 ? 128 : 104;
+    }
+    set_cursor_target(SLOT_MAINCURSOR, Coord{ .x = cursor_x, .y= cursor_y});
+    uint8_t tile_x_pos = ((cursor_x >> 4) - 1);
+    cursor_selected = (cursor_y == 104) ? tile_x_pos : tile_x_pos + 8;
+}
+
 __attribute__((cold)) static void update_starfield(bool password_input) {
     // uint8_t star_x_lo[32];
     uint8_t star_x[32];
     // uint8_t star_y_lo[32];
     uint8_t star_y[32];
     uint8_t star_type[32];
-    uint8_t input_password[4] = {};
-    uint8_t cursor_selected = 0;
-    uint8_t input_position = 0;
     auto cursor = objects[SLOT_MAINCURSOR];
-    auto inputcursor = objects[SLOT_CMDCURSOR];
 
     for (uint8_t i = 31; i < 128; i--) {
         star_x[i] = (rand() & 0xff);
@@ -451,57 +509,7 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
             }
             continue;
         } else if (!cursor->is_moving) {
-            // password input options
-            if (input & PAD_SELECT) {
-                pal_fade(false);
-                set_game_mode(MODE_RESET);
-                return;
-            }
-            if (input & PAD_START) {
-                // check all passwords for a match
-                for (uint8_t i = 0; i < 4; i++) {
-                    auto password = level_passwords[i];
-                    auto [xhi, xlo] = UNPACK((uint8_t)((password >> 8) & 0xff));
-                    auto [yhi, ylo] = UNPACK((password >> 0) & 0xff);
-                    if (xhi == input_password[0] && xlo == input_password[1]
-                        && yhi == input_password[2] && ylo == input_password[3]) {
-                        // success!
-                        pal_fade(false);
-                        ppu_off();
-                        level = i;
-                        set_game_mode(MODE_LOAD_LEVEL);
-                        return;
-                    }
-                }
-                // TODO: password bad sfx
-            }
-            if (input & PAD_A) {
-                input_password[input_position++] = cursor_selected;
-                uint8_t x = inputcursor->x >> 3;
-                uint8_t y = inputcursor->y >> 3;
-                draw_metatile_2_3(Nametable::A, x, y, password_alphabet[cursor_selected]);
-                x = inputcursor->x;
-                wrapped_add(x, 16, 160, 176 + 16*3);
-                set_cursor_target(SLOT_CMDCURSOR, Coord{ .x = x, .y= inputcursor->y});
-            }
-            if (input & PAD_B) {
-                uint8_t x = inputcursor->x;
-                wrapped_sub(x, 16, 176, 176 + 16*4);
-                set_cursor_target(SLOT_CMDCURSOR, Coord{ .x = x, .y= inputcursor->y});
-            }
-            uint8_t cursor_x = cursor->x;
-            uint8_t cursor_y = cursor->y;
-            if (input & PAD_LEFT) {
-                wrapped_sub(cursor_x, 16, 24, 152);
-            } else if (input & PAD_RIGHT) {
-                wrapped_add(cursor_x, 16, 8, 136);
-            }
-            if (input & (PAD_UP | PAD_DOWN)) {
-                cursor_y = cursor_y == 104 ? 128 : 104;
-            }
-            set_cursor_target(SLOT_MAINCURSOR, Coord{ .x = cursor_x, .y= cursor_y});
-            uint8_t tile_x_pos = ((cursor_x >> 4) - 1);
-            cursor_selected = (cursor_y == 104) ? tile_x_pos : tile_x_pos + 8;
+            handle_password_input();
         }
 
         move_object(SLOT_MAINCURSOR);
@@ -585,6 +593,7 @@ constexpr uint8_t Y_LO_BOUND = (22 * 8);
     cursor.target_y = Y_LO_BOUND;
     cursor.x_vel = 0;
     cursor.y_vel = 0;
+    cursor.frame = 0;
     cursor.state = 16;
     cursor.anim_state = 16;
     cursor.long_timer = 4;
@@ -598,6 +607,7 @@ constexpr uint8_t Y_LO_BOUND = (22 * 8);
     cmdcursor.is_moving = false;
     cmdcursor.x_vel = 0;
     cmdcursor.y_vel = 0;
+    cmdcursor.frame = 0;
     cmdcursor.state = 16;
     cmdcursor.anim_state = 16;
     // Reset level variables
@@ -618,6 +628,17 @@ void game_mode_victory_screen() {
 }
 
 void game_mode_load_level() {
+    memset((void*)&objects, 0, sizeof(objects));
+    memset(level_metatiles, 0, sizeof(level_metatiles));
+    auto player = objects[SLOT_PLAYER];
+    player.type = PLAYER;
+    
+    // player.is_moving = false;
+    // player.long_timer = 0;
+    // player.x_vel = 0;
+    // player.y_vel = 0;
+    pickup_count = 0;
+    current_sub = 0;
     reset_cursors();
     memset(commands, 0, sizeof(commands));
     memset(pickup_list, 0xff, sizeof(pickup_list));

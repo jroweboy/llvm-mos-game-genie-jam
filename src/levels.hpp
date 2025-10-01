@@ -34,7 +34,7 @@ extern "C" LevelObjType load_metatile_at_coord(uint8_t x, uint8_t y);
 extern "C" void update_level_buff(uint8_t tile_x, uint8_t tile_y, LevelObjType val);
 extern "C" void update_speed_setting();
 
-constexpr uint8_t LEVEL_COUNT = 4;
+constexpr uint8_t LEVEL_COUNT = 6;
 
 SPLIT_ARRAY_DEFINE(all_levels);
 SPLIT_ARRAY_DEFINE(level_titles);
@@ -42,6 +42,17 @@ extern const soa::Array<uint16_t, LEVEL_COUNT> level_passwords;
 // SPLIT_ARRAY_DEFINE(level_passwords);
 
 extern const Letter password_alphabet[16];
+
+consteval static uint16_t generate_password(uint8_t lev) {
+    unsigned seed = (0xface + lev);
+    
+    unsigned x = seed;
+    x ^= x << 7;
+    x ^= x >> 9;
+    x ^= x << 8;
+    seed = x;
+    return seed;
+}
 
 constexpr uint8_t L_MULTIPLE = 1 << 7;
 constexpr uint8_t L_HORIZONTAL = 0;
@@ -142,12 +153,39 @@ constexpr uint8_t L_FACING_LEFT = 0b11 << 6;
 #define A_BL(atr) ((atr) << 4)
 #define A_BR(atr) ((atr) << 6)
 
+
 #define UNPAREN(...) __VA_ARGS__
 #define CONCAT_IMPL(x, y) x ## y
 #define CONCAT(x, y) CONCAT_IMPL(x, y)
 #define LEVEL_IMPL(c, name,  ...) \
     CONCAT(extern const Letter LEVEL_TITLE_, c)[] = { UNPAREN name }; \
-    CONCAT(extern const uint8_t LEVEL_DATA_, c)[] = { __VA_ARGS__ };
+    CONCAT(extern const uint8_t LEVEL_DATA_, c)[] = { __VA_ARGS__ }; \
+    CONCAT(constexpr uint16_t LEVEL_PASSWORD_, c) = generate_password(c);
 
 #define NEXT_LEVEL(name, ...) \
     LEVEL_IMPL(__COUNTER__, name, __VA_ARGS__)
+
+// Generate a list of numbers of N-1
+#define GENERATE_1() 0
+#define GENERATE_2() GENERATE_1(), 1
+#define GENERATE_3() GENERATE_2(), 2
+#define GENERATE_4() GENERATE_3(), 3
+#define GENERATE_5() GENERATE_4(), 4
+#define GENERATE_6() GENERATE_5(), 5
+#define GENERATE_7() GENERATE_6(), 6
+#define GENERATE_8() GENERATE_7(), 7
+#define GENERATE_9() GENERATE_8(), 8
+#define GENERATE_10() GENERATE_9(), 9
+#define GENERATE_11() GENERATE_10(), 10
+#define GENERATE_12() GENERATE_11(), 11
+#define GENERATE_13() GENERATE_12(), 12
+#define GENERATE_14() GENERATE_13(), 13
+#define GENERATE_15() GENERATE_14(), 14
+#define GENERATE_16() GENERATE_15(), 15
+#define GENERATE_17() GENERATE_16(), 16
+#define GENERATE_18() GENERATE_17(), 17
+#define GENERATE_19() GENERATE_18(), 18
+#define GENERATE_20() GENERATE_19(), 19
+#define GENERATE_21() GENERATE_20(), 20
+
+#define GENERATE_N_1(n) CONCAT_IMPL(GENERATE_, n)()

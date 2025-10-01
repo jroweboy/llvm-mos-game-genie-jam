@@ -78,6 +78,9 @@ constinit FIXED static const uint8_t cursor_expand_timer_lut[] = {
 
 void draw_cursor(uint8_t slot) {
     auto cursor = objects[slot];
+    if (cursor->frame) {
+        return;
+    }
     if (cursor->timer == 0) {
         cursor.anim_timer++;
         cursor.anim_timer &= 7;

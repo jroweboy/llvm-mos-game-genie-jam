@@ -31,6 +31,7 @@ uint8_t command_index[3];
 uint8_t pickup_list[50];
 uint8_t current_sub;
 uint8_t speed_setting;
+static bool finished_level;
 
 
 constinit FIXED const uint8_t sub_attr_y_lut[] = { 2, 12, 20 };
@@ -147,6 +148,14 @@ __attribute__((noinline)) static void wait_for_flush() {
     draw_sprites();
     ppu_wait_nmi();
     oam_clear();
+}
+
+static void level_completed() {
+    // Level complete!
+    level++;
+    finished_level = true;
+    pal_fade(false);
+    set_game_mode(MODE_LOAD_LEVEL);
 }
 
 void update_sub_attribute(uint8_t new_val) {
@@ -276,7 +285,6 @@ static void draw_command_string(uint8_t id) {
     } else if (current_sub == 2 && id == CMD_JMP_ONE+1) {
         id = CMD_ERROR+1;
     }
-        // DEBUGGER();
         // uint8_t subcmd = current_sub + CMD_JMP_ONE+1;
         // if (subcmd == id) {
         //     id = CMD_YIELD+1;
@@ -395,11 +403,155 @@ static void reset_object(uint8_t slot) {
     }
 }
 
-void game_mode_edit_main() {
-    uint8_t input_buffer[8] = { 0 };
-    uint8_t read_ptr = 0;
-    uint8_t write_ptr = 0;
+constinit const static uint8_t KONAMI_CODE[10] = {
+    PAD_UP, PAD_UP, PAD_DOWN, PAD_DOWN,
+    PAD_LEFT, PAD_RIGHT, PAD_LEFT, PAD_RIGHT,
+    PAD_B, PAD_A
+};
+
+static bool prev_is_moving;
+static uint8_t input_buffer[8];
+static uint8_t latest_inputs[11];
+static uint8_t cheat_write_ptr;
+static uint8_t read_ptr;
+static uint8_t write_ptr;
+
+__attribute__((noinline)) static void handle_edit_main_mode() {
+    auto cursor = objects[1];
     
+    // Update cursor
+    auto latest_input = get_pad_new(0);
+
+    // If the cursor is moving and the player wants to do something, then buffer it
+    // till the movement stops.
+    if (latest_input) {
+        latest_inputs[cheat_write_ptr] = latest_input;
+        input_buffer[write_ptr++] = latest_input;
+        write_ptr &= sizeof(input_buffer) - 1;
+        wrapped_inc(cheat_write_ptr, 11);
+    }
+
+    // If we have input and we aren't currently moving the cursor
+    if (!cursor.is_moving && read_ptr != write_ptr) {
+        auto input = input_buffer[read_ptr++];
+        read_ptr &= sizeof(input_buffer) - 1;
+
+        // controls: b to "go back" in the current sub
+        // select to change which sub you are editing
+        // directions to move the cursor.
+        // start to start the game play
+
+        if (input & PAD_SELECT) {
+            update_sub_attribute();
+            wait_for_flush();
+            draw_command_string_main_cursor();
+            auto target = get_pos_from_index();
+            set_cursor_target(SLOT_CMDCURSOR, target);
+        }
+        // Calculate new cursor position
+        if (input & (PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT)) {
+            // Bit jank, but while they are holding B if you push a direction,
+            // it should move the cursor instead.
+            auto current = pad_state(0);
+            if (current & PAD_B) {
+                if (input & PAD_UP) {
+                    move_cmd_cursor(-3);
+                } else if (input & PAD_DOWN) {
+                    move_cmd_cursor(3);
+                }
+                if (input & PAD_LEFT) {
+                    move_cmd_cursor(-1);
+                } else if (input & PAD_RIGHT) {
+                    move_cmd_cursor(1);
+                }
+                auto target = get_pos_from_index();
+                set_cursor_target(SLOT_CMDCURSOR, target);
+            } else {
+                // Move the cursor for the selections
+                prev_is_moving = false;
+
+                uint8_t orig_x = cursor->x;
+                uint8_t orig_y = cursor->y;
+
+                Coord target = {.x = orig_x, .y = orig_y};
+
+                // apply the movement for the current tiles
+                if (input & PAD_UP) {
+                    wrapped_sub(target.y, 16, Y_LO_BOUND, Y_HI_BOUND+16);
+                } else if (input & PAD_DOWN) {
+                    wrapped_add(target.y, 16, Y_LO_BOUND-16, Y_HI_BOUND);
+                }
+                if (input & PAD_LEFT) {
+                    wrapped_sub(target.x, 16, X_LO_BOUND, X_HI_BOUND+16);
+                } else if (input & PAD_RIGHT) {
+                    wrapped_add(target.x, 16, X_LO_BOUND-16, X_HI_BOUND);
+                }
+
+                if (target.x == X_AVOID && target.y == Y_AVOID) {
+                    if (input & PAD_UP) {
+                        target.y -= 16;
+                    } else if (input & PAD_DOWN) {
+                        target.y += 16;
+                    }
+                    if (input & PAD_LEFT) {
+                        target.x -= 16;
+                    } else if (input & PAD_RIGHT) {
+                        target.x += 16;
+                    }
+                }
+                set_cursor_target(SLOT_MAINCURSOR, target);
+            }
+        }
+
+        if (input & PAD_B) {
+            move_cmd_cursor(-1);
+            auto target = get_pos_from_index();
+            set_cursor_target(SLOT_CMDCURSOR, target);
+        }
+
+        if (input & PAD_A) {
+            uint8_t x = (cursor->x - X_LO_BOUND) / 16;
+            uint8_t y = (cursor->y - Y_LO_BOUND) / 16;
+            uint8_t idx = x + y * 3;
+            // don't let sub 2 jump to sub 1!
+            if (!(idx == CMD_JMP_ONE+1 && current_sub == 2)) {
+                update_command_list(cursor_command_lut[idx]);
+                auto target = get_pos_from_index();
+                set_cursor_target(SLOT_CMDCURSOR, target);
+            }
+        }
+
+        if (input & PAD_START) {
+            uint8_t read = cheat_write_ptr;
+            uint8_t i = 0;
+            while (latest_inputs[read] == KONAMI_CODE[i++] && i <= 10)
+                wrapped_inc(read, 11);
+            if (i >= 10) {
+                // konami code activated! skip this level
+                level_completed();
+                return;
+            }
+            draw_sprites();
+            set_game_mode(GameMode::MODE_EXECUTE);
+            return;
+        }
+    } else {
+        if (prev_is_moving != cursor->is_moving) {
+            prev_is_moving = cursor->is_moving;
+            draw_command_string_main_cursor();
+        }
+        move_object(SLOT_MAINCURSOR);
+    }
+}
+
+void game_mode_edit_main() {
+    prev_is_moving = 0;
+    cheat_write_ptr = 0;
+    read_ptr = 0;
+    write_ptr = 0;
+    memset(input_buffer, 0, sizeof(input_buffer));
+    memset(latest_inputs, 0, sizeof(latest_inputs));
+
     auto cursor = objects[1];
     // cursor.is_moving = false;
     // cursor.x = X_LO_BOUND;
@@ -421,126 +573,17 @@ void game_mode_edit_main() {
         reset_object(i);
     }
 
-    bool prev_is_moving = false;
     draw_command_string_main_cursor();
 
     while (true) {
         ppu_wait_nmi();
+        if (game_mode != MODE_EDIT) {
+            return;
+        }
         pad_poll(0);
         oam_clear();
 
-        // Update cursor
-        auto latest_input = get_pad_new(0);
-
-        // If the cursor is moving and the player wants to do something, then buffer it
-        // till the movement stops.
-        if (latest_input) {
-            input_buffer[write_ptr++] = latest_input;
-            write_ptr &= sizeof(input_buffer) - 1;
-        }
-
-        // If we have input and we aren't currently moving the cursor
-        if (!cursor.is_moving && read_ptr != write_ptr) {
-            auto input = input_buffer[read_ptr++];
-            read_ptr &= sizeof(input_buffer) - 1;
-
-            // controls: b to "go back" in the current sub
-            // select to change which sub you are editing
-            // directions to move the cursor.
-            // start to start the game play
-
-            if (input & PAD_SELECT) {
-                update_sub_attribute();
-                wait_for_flush();
-                draw_command_string_main_cursor();
-                auto target = get_pos_from_index();
-                set_cursor_target(SLOT_CMDCURSOR, target);
-            }
-            // Calculate new cursor position
-            if (input & (PAD_UP | PAD_DOWN | PAD_LEFT | PAD_RIGHT)) {
-                // Bit jank, but while they are holding B if you push a direction,
-                // it should move the cursor instead.
-                auto current = pad_state(0);
-                if (current & PAD_B) {
-                    if (input & PAD_UP) {
-                        move_cmd_cursor(-3);
-                    } else if (input & PAD_DOWN) {
-                        move_cmd_cursor(3);
-                    }
-                    if (input & PAD_LEFT) {
-                        move_cmd_cursor(-1);
-                    } else if (input & PAD_RIGHT) {
-                        move_cmd_cursor(1);
-                    }
-                    auto target = get_pos_from_index();
-                    set_cursor_target(SLOT_CMDCURSOR, target);
-                } else {
-                    // Move the cursor for the selections
-                    prev_is_moving = false;
-
-                    uint8_t orig_x = cursor->x;
-                    uint8_t orig_y = cursor->y;
-
-                    Coord target = {.x = orig_x, .y = orig_y};
-
-                    // apply the movement for the current tiles
-                    if (input & PAD_UP) {
-                        wrapped_sub(target.y, 16, Y_LO_BOUND, Y_HI_BOUND+16);
-                    } else if (input & PAD_DOWN) {
-                        wrapped_add(target.y, 16, Y_LO_BOUND-16, Y_HI_BOUND);
-                    }
-                    if (input & PAD_LEFT) {
-                        wrapped_sub(target.x, 16, X_LO_BOUND, X_HI_BOUND+16);
-                    } else if (input & PAD_RIGHT) {
-                        wrapped_add(target.x, 16, X_LO_BOUND-16, X_HI_BOUND);
-                    }
-
-                    if (target.x == X_AVOID && target.y == Y_AVOID) {
-                        if (input & PAD_UP) {
-                            target.y -= 16;
-                        } else if (input & PAD_DOWN) {
-                            target.y += 16;
-                        }
-                        if (input & PAD_LEFT) {
-                            target.x -= 16;
-                        } else if (input & PAD_RIGHT) {
-                            target.x += 16;
-                        }
-                    }
-                    set_cursor_target(SLOT_MAINCURSOR, target);
-                }
-            }
-
-            if (input & PAD_B) {
-                move_cmd_cursor(-1);
-                auto target = get_pos_from_index();
-                set_cursor_target(SLOT_CMDCURSOR, target);
-            }
-
-            if (input & PAD_A) {
-                uint8_t x = (cursor->x - X_LO_BOUND) / 16;
-                uint8_t y = (cursor->y - Y_LO_BOUND) / 16;
-                uint8_t idx = x + y * 3;
-                // don't let sub 2 jump to sub 1!
-                if (!(idx == CMD_JMP_ONE+1 && current_sub == 2)) {
-                    update_command_list(cursor_command_lut[idx]);
-                    auto target = get_pos_from_index();
-                    set_cursor_target(SLOT_CMDCURSOR, target);
-                }
-            }
-
-            if (input & PAD_START) {
-                draw_sprites();
-                set_game_mode(GameMode::MODE_EXECUTE);
-                return;
-            }
-        } else {
-            if (prev_is_moving != cursor->is_moving) {
-                prev_is_moving = cursor->is_moving;
-                draw_command_string_main_cursor();
-            }
-            move_object(SLOT_MAINCURSOR);
-        }
+        handle_edit_main_mode();
 
         if (cmdcursor->is_moving)
             move_object(SLOT_CMDCURSOR);
@@ -588,7 +631,6 @@ static bool execute_action(uint8_t slot) {
     auto cmd = commands[command_index[current_sub]];
     auto obj = objects[slot];
     auto cmdcursor = objects[2];
-    // DEBUGGER(cmd);
     switch ((Command)cmd) {
     case CMD_MOVE: {
         Coord target;
@@ -719,14 +761,86 @@ static void run_object_new_frame(uint8_t slot) {
     }
 }
 
+static bool finished_execute;
+static uint8_t frame_length;
+
+__attribute__((noinline)) static void handle_execute_main_mode(uint8_t base_frame_length) {
+    auto cmdcursor = objects[2];
+    auto input = get_pad_new(0);
+
+    if (input & PAD_START) {
+        finished_execute = true;
+        return;
+    }
+
+    if (frame_length == 0) {
+        if (player_died) {
+            finished_execute = true;
+            return;
+        }
+        // Run other objects before player
+        for (uint8_t i=3; i<10; i++) {
+            run_object_new_frame(i);
+        }
+
+        uint8_t original_sub;
+        do {
+            original_sub = current_sub;
+            if (execute_action(0)) {
+                // Level complete!
+                level_completed();
+                return;
+            }
+        } while (original_sub != current_sub);
+        frame_length = base_frame_length;
+        auto id = commands[command_index[current_sub]];
+        draw_command_string(command_to_string_lut[id]);
+
+        // advance to the next command
+        move_cmd_cursor(1);
+        
+        // check if its time to end the run.
+        if (current_sub == 0 && command_index[0] == 0) {
+            // end conditions
+            return;
+        } else if (command_index[current_sub] == command_lower_bound_lut[current_sub]) {
+            // work around an issue when returning from sub 2 -> 1 and the jmp command
+            // is the last instruction of sub 1
+            if (current_sub == 2 && command_index[1] == 12) {
+                previous_sub = 0;
+            }
+            update_sub_attribute(previous_sub);
+            previous_sub = 0;
+            wait_for_flush();
+        }
+        
+        auto target = get_pos_from_index();
+        set_cursor_target(SLOT_CMDCURSOR, target);
+    } else {
+        for (uint8_t i=3; i<10; i++) {
+            run_object_continue_frame(i);
+        }
+        if (cmdcursor->is_moving) {
+            move_object(SLOT_CMDCURSOR);
+        }
+        move_object(SLOT_PLAYER);
+        frame_length--;
+    }
+
+};
+
 constinit const uint8_t base_frame_pacing_lut[3] = {
     30, 15, 7
 };
 void game_mode_execute_main() {
     yielded_one = false;
     yielded_two = false;
+    finished_execute = false;
+    finished_level = false;
     previous_sub = 0;
-    auto cmdcursor = objects[2];
+    auto cursor = objects[SLOT_MAINCURSOR];
+    cursor.frame = 1;
+    auto cmdcursor = objects[SLOT_CMDCURSOR];
     cmdcursor.is_moving = true;
 
     uint8_t original_objs[sizeof(Object) * 8];
@@ -760,12 +874,11 @@ void game_mode_execute_main() {
     uint8_t delay_frames = base_frame_length;
     while (--delay_frames) 
         wait_for_flush();
-    // delay(base_frame_length);
+
+    frame_length = 1;
 
     auto id = commands[command_index[current_sub]];
     draw_command_string(command_to_string_lut[id]);
-
-    uint8_t frame_length = 1;
 
     player_died = false;
 
@@ -774,69 +887,14 @@ void game_mode_execute_main() {
         pad_poll(0);
         oam_clear();
 
-        auto input = get_pad_new(0);
-
-        if (input & PAD_START) {
-            break;
-        }
-
-        if (frame_length == 0) {
-            if (player_died) {
-                break;
-            }
-            // Run other objects before player
-            for (uint8_t i=3; i<10; i++) {
-                run_object_new_frame(i);
-            }
-
-            uint8_t original_sub;
-            do {
-                original_sub = current_sub;
-                if (execute_action(0)) {
-                    // Level complete!
-                    level++;
-                    pal_fade(false);
-                    set_game_mode(MODE_LOAD_LEVEL);
-                    return;
-                }
-
-            } while (original_sub != current_sub);
-            frame_length = base_frame_length;
-            auto id = commands[command_index[current_sub]];
-            draw_command_string(command_to_string_lut[id]);
-
-            // advance to the next command
-            move_cmd_cursor(1);
-            
-            // check if its time to end the run.
-            if (current_sub == 0 && command_index[0] == 0) {
-                // end conditions
-                break;
-            } else if (command_index[current_sub] == command_lower_bound_lut[current_sub]) {
-                // work around an issue when returning from sub 2 -> 1 and the jmp command
-                // is the last instruction of sub 1
-                if (current_sub == 2 && command_index[1] == 12) {
-                    previous_sub = 0;
-                }
-                update_sub_attribute(previous_sub);
-                previous_sub = 0;
-                wait_for_flush();
-            }
-            
-            auto target = get_pos_from_index();
-            set_cursor_target(SLOT_CMDCURSOR, target);
-        } else {
-            for (uint8_t i=3; i<10; i++) {
-                run_object_continue_frame(i);
-            }
-            if (cmdcursor->is_moving) {
-                move_object(SLOT_CMDCURSOR);
-            }
-            move_object(SLOT_PLAYER);
-            frame_length--;
-        }
+        handle_execute_main_mode(base_frame_length);
 
         draw_sprites();
+
+        if (finished_execute)
+            break;
+        if (finished_level)
+            return;
     }
 
     current_sub = original_sub;

@@ -74,7 +74,7 @@ static Coord read_pos(uint8_t *current_level) {
     return level_to_world(p);
 }
 
-extern "C" void update_level_buff(uint8_t tile_x, uint8_t tile_y, LevelObjType val) {
+extern "C" __attribute__((noinline)) void update_level_buff(uint8_t tile_x, uint8_t tile_y, LevelObjType val) {
     uint8_t v = (uint8_t)val;
     uint8_t x = (tile_x - LEVEL_X_POS) >> 1;
     uint8_t y = (tile_y - LEVEL_Y_POS) >> 1;
@@ -88,7 +88,7 @@ extern "C" void update_level_buff(uint8_t tile_x, uint8_t tile_y, LevelObjType v
     }
 }
 
-extern "C" LevelObjType load_metatile_at_coord(uint8_t px_x, uint8_t px_y) {
+extern "C" __attribute__((noinline)) LevelObjType load_metatile_at_coord(uint8_t px_x, uint8_t px_y) {
     // convert pixel position to offset in the world
     uint8_t x = (px_x >> 4) - LEVEL_X_POS/2;
     uint8_t y = (px_y >> 4) - LEVEL_Y_POS/2;
@@ -220,15 +220,8 @@ void draw_pickup(Point p) {
 }
 
 void load_level(uint8_t level_num) {
-    constexpr uint8_t slot = 0;
-    auto player = objects[slot];
-    player.is_moving = false;
-    player.long_timer = 0;
-    player.x_vel = 0;
-    player.y_vel = 0;
     level_offset = 0;
-    pickup_count = 0;
-    current_sub = 0;
+    auto player = objects[SLOT_PLAYER];
     uint8_t *current_level = (uint8_t*)SPLIT_ARRAY_POINTER(all_levels, level_num);
     while (true) {
         cmd = current_level[level_offset++];
