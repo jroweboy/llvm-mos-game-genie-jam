@@ -319,7 +319,6 @@ __attribute__((noinline)) static void handle_password_input() {
     auto inputcursor = objects[SLOT_CMDCURSOR];
     // password input options
     if (input & PAD_SELECT) {
-        pal_fade(false);
         set_game_mode(MODE_RESET);
         exit_starfield_effect = true;
         return;
@@ -333,11 +332,9 @@ __attribute__((noinline)) static void handle_password_input() {
             if (xhi == input_password[0] && xlo == input_password[1]
                 && yhi == input_password[2] && ylo == input_password[3]) {
                 // success!
-                pal_fade(false);
-                ppu_off();
                 level = i;
-                set_game_mode(MODE_LOAD_LEVEL);
                 exit_starfield_effect = true;
+                set_game_mode(MODE_LOAD_LEVEL);
                 return;
             }
         }
@@ -383,6 +380,8 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
     uint8_t star_y[32];
     uint8_t star_type[32];
     auto cursor = objects[SLOT_MAINCURSOR];
+    GameMode orig_game_mode = game_mode;
+    exit_starfield_effect = false;
 
     for (uint8_t i = 31; i < 128; i--) {
         star_x[i] = (myrand() & 0xff);
@@ -447,14 +446,13 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
         if (cursor.timer != 0) {
             cursor.timer--;
         }
-        if (game_mode != MODE_LOAD_LEVEL)
+        if (game_mode != orig_game_mode)
             break;
     }
     pal_fade(false);
     ppu_off();
     vram_adr(NAMETABLE_A);
     vram_fill(0, 0x400);
-    set_game_mode(MODE_LOAD_LEVEL);
 }
 
 static void draw_starscreen() {
@@ -472,6 +470,7 @@ static void draw_starscreen() {
 }
 
 void game_mode_enter_password() {
+    memset((void*)&objects, 0, sizeof(objects));
     auto cursor = objects[SLOT_MAINCURSOR];
     auto cmdcursor = objects[SLOT_CMDCURSOR];
     cursor.x = 24;
@@ -561,11 +560,6 @@ void game_mode_load_level() {
     memset(level_metatiles, 0, sizeof(level_metatiles));
     auto player = objects[SLOT_PLAYER];
     player.type = PLAYER;
-    
-    // player.is_moving = false;
-    // player.long_timer = 0;
-    // player.x_vel = 0;
-    // player.y_vel = 0;
     pickup_count = 0;
     current_sub = 0;
     reset_cursors();

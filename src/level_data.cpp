@@ -7,6 +7,32 @@
 #include "text_render.hpp"
 
 
+// NEXT_LEVEL(
+//     (LETTERS_11("CANDY LAND")),
+//     Difficulty::MEDIUM,
+//     L_PLAYER(Facing::LEFT, 2, 4),
+//     L_ONE(LevelObjType::PICKUP, 8, 2),
+//     L_ONE(LevelObjType::PICKUP, 8, 6),
+//     L_MANY(LevelObjType::SOLID_WALL, L_VERTICAL, 3, 5, 3),
+//     L_MANY(LevelObjType::TIMED_WALL, L_VERTICAL, 3, 5, 0),
+//     L_MANY(LevelObjType::TIMED_WALL, L_VERTICAL, 3, 5, 6),
+// #ifdef TEST_LEVEL_SOLUTION
+//     L_CMD_ONE(4),
+//     PACK(CMD_WAIT, CMD_MOVE),
+//     PACK(CMD_MOVE, CMD_MOVE),
+//     PACK(CMD_MOVE, CMD_PICKUP),
+//     PACK(CMD_TURN_RIGHT, CMD_END),
+//     L_CMD_MAIN(5),
+//     PACK(CMD_MOVE, CMD_MOVE),
+//     PACK(TURN_LEFT, CMD_MOVE),
+//     PACK(CMD_MOVE, TURN_RIGHT),
+//     PACK(CMD_JMP_ONE, CMD_JMP_ONE),
+//     PACK(CMD_END, CMD_END),
+// #else
+// #endif
+//     L_END,
+// );
+
 NEXT_LEVEL(
     (LETTERS_14("ITS A FREEBIE")),
     Difficulty::EASY,
