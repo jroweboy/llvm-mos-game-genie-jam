@@ -22,6 +22,15 @@ constexpr uint8_t LEVEL_Y_POS = 2;
 uint8_t pickup_count;
 uint8_t level_metatiles[(10 * 9) / 2];
 
+static uint8_t find_obj_slot() {
+    for (int i=3; i<10; i++) {
+        auto obj = objects[i];
+        if (obj->type == NO_OBJECT) {
+            return i;
+        }
+    }
+    return 3;
+}
 
 void timed_wall_change_color(uint8_t slot, uint8_t pal) {
     auto obj = objects[slot];
@@ -41,13 +50,15 @@ void timed_wall_change_color(uint8_t slot, uint8_t pal) {
     }
 }
 
-static void create_timed_wall_obj(uint8_t slot, uint8_t lendir, uint8_t x, uint8_t y) {
+static uint8_t create_timed_wall_obj(uint8_t lendir, uint8_t x, uint8_t y) {
+    auto slot = find_obj_slot();
     auto obj = objects[slot];
     obj.type = ObjectType::TIMED_WALL;
     obj.x = x;
     obj.y = y;
     obj.facing_dir = lendir;
     timed_wall_change_color(slot, BG_PALETTE_GREEN);
+    return slot;
 }
 
 
@@ -103,8 +114,8 @@ void level_draw_wall(uint8_t x, uint8_t y, uint8_t lendir, LevelObjType type) {
     }
 }
 
-static void create_wall(uint8_t *current_level, uint8_t slot) {
-    auto type = slot ? LevelObjType::TIMED_WALL : LevelObjType::SOLID_WALL;
+static void create_wall(uint8_t *current_level, LevelObjType type) {
+    // auto type = slot ? LevelObjType::TIMED_WALL : LevelObjType::SOLID_WALL;
     auto [x, y] = read_pos(current_level);
     auto orig_x = x;
     auto orig_y = y;
@@ -117,8 +128,15 @@ static void create_wall(uint8_t *current_level, uint8_t slot) {
         // update_level_buff(x, y, type);
         // draw_metatile_2_2(Nametable::A, x, y, metatile);
     }
-    if (slot)
-        create_timed_wall_obj(slot, lendir, orig_x, orig_y);
+    if (type != LevelObjType::SOLID_WALL) {
+        uint8_t slot = create_timed_wall_obj(lendir, orig_x, orig_y);
+        if (type == LevelObjType::HURT_WALL) {
+            // Change the wall color and then delete the object
+            timed_wall_change_color(slot, BG_PALETTE_RED);
+            auto obj = objects[slot];
+            obj.type = ObjectType::NO_OBJECT;
+        }
+    }
 }
 
 const uint8_t level_hud[] = {
@@ -179,16 +197,6 @@ void draw_hud([[maybe_unused]] uint8_t level_num) {
     flush_vram_update2();
 }
 
-static inline uint8_t find_obj_slot() {
-    for (int i=3; i<10; i++) {
-        auto obj = objects[i];
-        if (obj->type == NO_OBJECT) {
-            return i;
-        }
-    }
-    return 3;
-}
-
 static void add_command(uint8_t* current_level) {
     uint8_t len = current_level[level_offset++];
     while (len-- > 0) {
@@ -224,19 +232,15 @@ void load_level(uint8_t level_num) {
     uint8_t *current_level = (uint8_t*)SPLIT_ARRAY_POINTER(all_levels, level_num);
     while (true) {
         cmd = current_level[level_offset++];
-        switch (static_cast<LevelObjType>(cmd & 0x0f)) {
+        LevelObjType objtype = static_cast<LevelObjType>(cmd & 0x0f);
+        switch (objtype) {
         case LevelObjType::TERMINATOR:
             return;
+        case LevelObjType::TIMED_WALL:
+        case LevelObjType::SOLID_WALL:
         case LevelObjType::HURT_WALL:
-        case LevelObjType::TIMED_WALL: {
-            auto slot = find_obj_slot();
-            create_wall(current_level, slot);
+            create_wall(current_level, objtype);
             break;
-        }
-        case LevelObjType::SOLID_WALL: {
-            create_wall(current_level, 0);
-            break;
-        }
         case LevelObjType::PICKUP: {
             uint8_t xy = current_level[level_offset++];
             draw_pickup((Point)xy);
