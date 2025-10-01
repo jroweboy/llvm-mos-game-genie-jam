@@ -119,24 +119,31 @@ extern const uint8_t title_screen_2[] = {
     DRAW_END
 };
 extern const uint8_t title_screen_3[] = {
-    DRAW_STRING, 2, 3, LETTERS_9("COMMANDS"),
-    // DRAW_STRING, 2, 6, LETTERS_5("MOVE"),
-    // DRAW_STRING, 5, 6, LETTERS_9("WALK FORWARD"),
-    // M_HORZ(3, 10, 10, Metatile::SEPARATOR, Metatile::SUB, Metatile::SEPARATOR),
-    // A_HORZ(2, 10, 10, A_BR(BG_PALETTE_BLUE), A_BL(BG_PALETTE_BLUE) | A_BR(BG_PALETTE_BLUE)),
-    // DRAW_STRING, 2, 13, LETTERS_13("AND RUN THEM"),
-    // DRAW_STRING, 2, 16, LETTERS_11("WITH START"),
-    // A_HORZ(4, 10, 18, A_TR(BG_PALETTE_GREEN) | A_BR(BG_PALETTE_GREEN), 0xff, 0xff, 0xff), // BG_PALETTE_GREEN
-    // DRAW_PLAYER_DOWN, 13 * 8, 24 * 8,
+    DRAW_STRING, 7, 3, LETTERS_9("CONTROLS"),
+    DRAW_STRING, 2, 7, LETTERS_17("A TO ADD COMMAND"),
+    DRAW_CURSOR, 2 * 8 - 2, 7 * 8 + 2,
+    DRAW_STRING, 2, 11, LETTERS_17("B TO MOVE CURSOR"),
+    DRAW_STRING, 2, 15, LETTERS_15("SELECT TO MOVE"),
+    DRAW_STRING, 2, 18, LETTERS_14("TO SUBROUTINE"),
+    DRAW_PLAYER_DOWN, 13 * 8, 24 * 8,
+    DRAW_END
+};
+extern const uint8_t title_screen_4[] = {
+    DRAW_STRING, 5, 3, LETTERS_13("PRESS SELECT"),
+    DRAW_STRING, 1, 6, LETTERS_17("FOR PASSWORD BOX"),
+    DRAW_STRING, 11, 13, LETTERS_5("HINT"),
+    DRAW_STRING, 5, 16, LETTERS_13("IF STUCK TRY"),
+    DRAW_STRING, 1, 19, LETTERS_18("FAMOUS CHEATCODE"),
     DRAW_END
 };
 
-constexpr uint8_t TITLE_SCREEN_COUNT = 3;
+constexpr uint8_t TITLE_SCREEN_COUNT = 4;
 SPLIT_ARRAY(title_screen_data,
     title_screen_0,
     title_screen_1,
     title_screen_2,
-    title_screen_3
+    title_screen_3,
+    title_screen_4
 );
 
 void draw_title_screen(uint8_t idx) {

@@ -287,7 +287,7 @@ static void draw_command_string(uint8_t id) {
         id = CMD_YIELD+2;
     } else if ((current_sub == 1 && id == CMD_JMP_ONE+1)
         || (current_sub == 2 && id == CMD_JMP_TWO+1)) {
-        id = CMD_YIELD+1;
+        id = CMD_ERROR+1;
     } else if (current_sub == 2 && id == CMD_JMP_ONE+1) {
         id = CMD_ERROR+1;
     }
@@ -370,9 +370,6 @@ static void update_wall_attr(uint8_t slot) {
             x += 2;
         }
     }
-    // lag a frame cuz why not
-    write_all_attributes();
-    wait_for_flush();
 }
 
 static void reset_object(uint8_t slot) {
@@ -381,23 +378,6 @@ static void reset_object(uint8_t slot) {
     case TIMED_WALL: {
         object.param2 = 0;
         update_wall_attr(slot);
-        // uint8_t lendir = object->facing_dir;
-        // uint8_t len = lendir & 0x7f;
-        // uint8_t x = object->x;
-        // uint8_t y = object->y;
-        // for (uint8_t i=0; i<len; i++) {
-        //     update_level_buff(x, y, timed_wall_type[0]);
-        //     update_attribute(x, y, timed_wall_attrs[0], false);
-            
-        //     if (lendir & L_VERTICAL) {
-        //         y += 2;
-        //     } else {
-        //         x += 2;
-        //     }
-        // }
-        // lag a frame cuz why not
-        write_all_attributes();
-        wait_for_flush();
         break;
     }
     case PACE_ENEMY:
@@ -524,6 +504,11 @@ __attribute__((noinline)) static void handle_edit_main_mode() {
             } else if (idx == CMD_JMP_TWO+1 && level_difficulty[level] < Difficulty::HARD) {
                 return;
             }
+            if (idx == CMD_JMP_ONE+1 && current_sub == 1) {
+                return;
+            } else if (idx == CMD_JMP_TWO+1 && current_sub == 2) {
+                return;
+            }
             // don't let sub 2 jump to sub 1!
             if (!(idx == CMD_JMP_ONE+1 && current_sub == 2)) {
                 update_command_list(cursor_command_lut[idx]);
@@ -583,6 +568,9 @@ void game_mode_edit_main() {
     for (uint8_t i=3; i<10; i++) {
         reset_object(i);
     }
+    // lag a frame cuz why not
+    write_all_attributes();
+    wait_for_flush();
 
     draw_command_string_main_cursor();
 
@@ -633,8 +621,8 @@ constinit FIXED const int8_t y_movement[4] = {
 };
 
 static bool player_died;
-static bool yielded_one;
-static bool yielded_two;
+// static bool yielded_one;
+// static bool yielded_two;
 static uint8_t previous_sub;
 
 static bool execute_action(uint8_t slot) {
@@ -691,17 +679,17 @@ static bool execute_action(uint8_t slot) {
     case CMD_JMP_ONE: {
         move_cmd_cursor(1);
         uint8_t next_sub;
-        if (current_sub == 1) {
-            next_sub = 0;
-            yielded_one = true;
-        } else {
-            next_sub = 1;
-            if (!yielded_one) {
-                command_index[1] = 12;
-            } else {
-                yielded_one = false;
-            }
-        }
+        // if (current_sub == 1) {
+            // next_sub = 0;
+            // yielded_one = true;
+        // } else {
+        next_sub = 1;
+        // if (!yielded_one) {
+            command_index[1] = 12;
+        // } else {
+            // yielded_one = false;
+        // }
+        // }
         update_sub_attribute(next_sub);
         current_sub = next_sub;
         auto [x, y] = get_pos_from_index();
@@ -713,18 +701,18 @@ static bool execute_action(uint8_t slot) {
     case CMD_JMP_TWO: {
         move_cmd_cursor(1);
         uint8_t next_sub;
-        if (current_sub == 2) {
-            next_sub = previous_sub;
-            yielded_two = true;
-        } else {
+        // if (current_sub == 2) {
+            // next_sub = previous_sub;
+            // yielded_two = true;
+        // } else {
             previous_sub = current_sub;
             next_sub = 2;
-            if (!yielded_two) {
+            // if (!yielded_two) {
                 command_index[2] = 12 + 9;
-            } else {
-                yielded_two = false;
-            }
-        }
+            // } else {
+                // yielded_two = false;
+            // }
+        // }
         update_sub_attribute(next_sub);
         current_sub = next_sub;
         auto [x, y] = get_pos_from_index();
@@ -756,7 +744,6 @@ static bool execute_action(uint8_t slot) {
     }
     return false;
 }
-
 
 static void run_object_new_frame(uint8_t slot) {
     auto object = objects[slot];
@@ -802,6 +789,8 @@ __attribute__((noinline)) static void handle_execute_main_mode(uint8_t base_fram
         for (uint8_t i=3; i<10; i++) {
             run_object_new_frame(i);
         }
+        write_all_attributes();
+        wait_for_flush();
 
         uint8_t original_sub;
         do {
@@ -818,13 +807,7 @@ __attribute__((noinline)) static void handle_execute_main_mode(uint8_t base_fram
 
         // advance to the next command
         move_cmd_cursor(1);
-        
-        // check if its time to end the run.
-        if (current_sub == 0 && command_index[0] == 0) {
-            // end conditions
-            finished_execute = true;
-            return;
-        } else if (command_index[current_sub] == command_lower_bound_lut[current_sub]) {
+        if (command_index[current_sub] == command_lower_bound_lut[current_sub]) {
             // work around an issue when returning from sub 2 -> 1 and the jmp command
             // is the last instruction of sub 1
             if (current_sub == 2 && command_index[1] == 12) {
@@ -833,6 +816,12 @@ __attribute__((noinline)) static void handle_execute_main_mode(uint8_t base_fram
             update_sub_attribute(previous_sub);
             previous_sub = 0;
             wait_for_flush();
+        }
+        // check if its time to end the run.
+        if (current_sub == 0 && command_index[0] == 0) {
+            // end conditions
+            finished_execute = true;
+            return;
         }
         
         auto target = get_pos_from_index();
@@ -854,8 +843,8 @@ constinit const uint8_t base_frame_pacing_lut[3] = {
     30, 15, 7
 };
 void game_mode_execute_main() {
-    yielded_one = false;
-    yielded_two = false;
+    // yielded_one = false;
+    // yielded_two = false;
     finished_execute = false;
     finished_level = false;
     previous_sub = 0;

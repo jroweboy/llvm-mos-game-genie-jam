@@ -7,71 +7,6 @@
 #include "text_render.hpp"
 
 NEXT_LEVEL(
-    (LETTERS_11("A-MAZE-ING")), 
-    Difficulty::HARD,
-    L_PLAYER(Facing::Right, 0, 0),
-    L_ONE(LevelObjType::PICKUP, 9,1),
-    L_ONE(LevelObjType::PICKUP, 6,7),
-    L_MANY(LevelObjType::SOLID_WALL, L_HORIZONTAL, 3, 0, 1),
-    L_MANY(LevelObjType::SOLID_WALL, L_VERTICAL, 2, 4, 0),
-    L_MANY(LevelObjType::HURT_WALL, L_VERTICAL, 2, 0, 4),
-    L_MANY(LevelObjType::SOLID_WALL, L_VERTICAL, 3, 2, 6),
-    L_MANY(LevelObjType::SOLID_WALL, L_VERTICAL, 2, 2, 3),
-    L_MANY(LevelObjType::SOLID_WALL, L_VERTICAL, 2, 3, 3),
-    L_MANY(LevelObjType::SOLID_WALL, L_VERTICAL, 3, 6, 1),
-    L_MANY(LevelObjType::SOLID_WALL, L_HORIZONTAL, 3, 4, 3),
-    L_MANY(LevelObjType::SOLID_WALL, L_HORIZONTAL, 2, 7, 1),
-    L_MANY(LevelObjType::SOLID_WALL, L_HORIZONTAL, 2, 8, 2),
-    L_MANY(LevelObjType::SOLID_WALL, L_HORIZONTAL, 5, 5, 6),
-#ifdef TEST_LEVEL_SOLUTION
-    L_CMD_ONE(3), 
-    PACK(CMD_JMP_TWO, CMD_TURN_LEFT),
-    PACK(CMD_MOVE, CMD_MOVE),
-    PACK(CMD_TURN_LEFT, CMD_JMP_TWO),
-
-    L_CMD_TWO(4),
-    PACK(CMD_MOVE, CMD_MOVE),
-    PACK(CMD_MOVE, CMD_MOVE),
-    PACK(CMD_TURN_RIGHT, CMD_MOVE),
-    PACK(CMD_MOVE, CMD_MOVE),
-
-    L_CMD_MAIN(7),
-    PACK(CMD_JMP_ONE, CMD_JMP_ONE), 
-    PACK(CMD_TURN_RIGHT, CMD_MOVE), 
-    PACK(CMD_MOVE, CMD_TURN_LEFT),
-    PACK(CMD_JMP_TWO, CMD_TURN_LEFT),
-    PACK(CMD_JMP_ONE, CMD_END),
-    PACK(CMD_TURN_LEFT, CMD_JMP_TWO),
-    PACK(CMD_PICKUP, CMD_END),
-    // PACK(CMD_MOVE, CMD_MOVE),
-    // PACK(CMD_TURN_RIGHT, CMD_JMP_TWO), 
-    // PACK(CMD_TURN_LEFT, CMD_MOVE), 
-    // PACK(CMD_MOVE, CMD_TURN_LEFT),
-    // PACK(CMD_JMP_TWO, CMD_END), 
-#else 
-#endif
-    // Put L_END at the end of the level design. If you don't have it, the program will keep going 
-    L_END,
-);
-
-NEXT_LEVEL(
-    (LETTERS_12("L FOR THE W")),
-    Difficulty::MEDIUM,
-    L_PLAYER(Facing::Up, 5, 5),
-    L_ONE(LevelObjType::PICKUP, 5, 1),
-#ifdef TEST_LEVEL_SOLUTION
-    L_CMD_MAIN(3),
-    PACK(CMD_MOVE, CMD_MOVE), PACK(CMD_MOVE, CMD_MOVE),
-    PACK(CMD_PICKUP, CMD_END),
-#else
-    L_CMD_MAIN(3),
-    PACK(CMD_MOVE, CMD_MOVE), PACK(CMD_MOVE, CMD_MOVE),
-    PACK(CMD_PICKUP, CMD_END),
-#endif
-    L_END,
-);
-
-NEXT_LEVEL(
     (LETTERS_14("ITS A FREEBIE")),
     Difficulty::EASY,
     L_PLAYER(Facing::Up, 5, 5),
@@ -235,6 +170,36 @@ NEXT_LEVEL(
     L_END,
 );
 
+
+NEXT_LEVEL(
+    (LETTERS_12("L FOR THE W")),
+    Difficulty::MEDIUM,
+    L_PLAYER(Facing::Right, 1, 7),
+    L_MANY(LevelObjType::PICKUP, L_HORIZONTAL, 2, 4, 6),
+    L_ONE(LevelObjType::PICKUP, 4, 2),
+    L_ONE(LevelObjType::PICKUP, 8, 5),
+    L_ONE(LevelObjType::PICKUP, 7, 1),
+    L_MANY(LevelObjType::SOLID_WALL, L_VERTICAL, 3, 6, 2),
+    L_ONE(LevelObjType::HURT_WALL, 2, 3),
+    L_ONE(LevelObjType::HURT_WALL, 4, 3),
+    L_ONE(LevelObjType::HURT_WALL, 2, 5),
+    L_ONE(LevelObjType::HURT_WALL, 4, 5),
+#ifdef TEST_LEVEL_SOLUTION
+    L_CMD_MAIN(4),
+    PACK(CMD_JMP_ONE, CMD_JMP_ONE),
+    PACK(CMD_MOVE, CMD_TURN_LEFT),
+    PACK(CMD_JMP_ONE, CMD_JMP_ONE),
+    PACK(CMD_JMP_ONE, CMD_END),
+    L_CMD_ONE(4),
+    PACK(CMD_MOVE, CMD_MOVE),
+    PACK(CMD_MOVE, CMD_MOVE),
+    PACK(CMD_TURN_LEFT, CMD_MOVE),
+    PACK(CMD_PICKUP, CMD_END),
+#else
+#endif
+    L_END,
+);
+
 NEXT_LEVEL(
     (LETTERS_15("NOT A SHORTCUT")),
     Difficulty::MEDIUM,
@@ -262,7 +227,42 @@ NEXT_LEVEL(
 );
 
 NEXT_LEVEL(
-    (LETTERS_7("ZIG-ZAG")), 
+    (LETTERS_11("A MAZE ING")), 
+    Difficulty::MEDIUM,
+    L_PLAYER(Facing::Right, 0, 0),
+    L_ONE(LevelObjType::PICKUP, 6,7),
+    L_MANY(LevelObjType::SOLID_WALL, L_HORIZONTAL, 3, 0, 1),
+    L_MANY(LevelObjType::SOLID_WALL, L_VERTICAL, 2, 4, 0),
+    L_MANY(LevelObjType::HURT_WALL, L_VERTICAL, 2, 0, 4),
+    L_MANY(LevelObjType::SOLID_WALL, L_VERTICAL, 3, 2, 6),
+    L_MANY(LevelObjType::SOLID_WALL, L_VERTICAL, 2, 2, 3),
+    L_MANY(LevelObjType::SOLID_WALL, L_VERTICAL, 2, 3, 3),
+    L_MANY(LevelObjType::SOLID_WALL, L_VERTICAL, 3, 6, 1),
+    L_MANY(LevelObjType::SOLID_WALL, L_HORIZONTAL, 3, 4, 3),
+    L_MANY(LevelObjType::SOLID_WALL, L_HORIZONTAL, 2, 7, 1),
+    L_MANY(LevelObjType::SOLID_WALL, L_HORIZONTAL, 2, 8, 2),
+    L_MANY(LevelObjType::SOLID_WALL, L_HORIZONTAL, 5, 5, 6),
+#ifdef TEST_LEVEL_SOLUTION
+    L_CMD_ONE(4), 
+    PACK(CMD_MOVE, CMD_MOVE),
+    PACK(CMD_PICKUP, CMD_MOVE),
+    PACK(CMD_TURN_RIGHT, CMD_MOVE),
+    PACK(CMD_MOVE, CMD_TURN_RIGHT),
+    L_CMD_MAIN(6),
+    PACK(CMD_JMP_ONE, CMD_MOVE), 
+    PACK(CMD_MOVE, CMD_TURN_LEFT), 
+    PACK(CMD_MOVE, CMD_MOVE),
+    PACK(CMD_MOVE, CMD_TURN_LEFT),
+    PACK(CMD_JMP_ONE, CMD_TURN_LEFT),
+    PACK(CMD_TURN_LEFT, CMD_JMP_ONE),
+#else 
+#endif
+    // Put L_END at the end of the level design. If you don't have it, the program will keep going 
+    L_END,
+);
+
+NEXT_LEVEL(
+    (LETTERS_8("ZIG ZAG")), 
     Difficulty::HARD,
     L_PLAYER(Facing::Right, 0, 0),
     L_ONE(LevelObjType::PICKUP, 9, 1),
@@ -306,6 +306,103 @@ NEXT_LEVEL(
 );
 
 NEXT_LEVEL(
+    (LETTERS_13("GREAT DIVIDE")), 
+    Difficulty::HARD,
+    L_PLAYER(Facing::Left, 8, 6),
+    L_MANY(LevelObjType::PICKUP, L_VERTICAL, 2, 9, 1),
+    L_ONE(LevelObjType::PICKUP, 9, 4),
+    L_ONE(LevelObjType::PICKUP, 6, 2),
+    L_ONE(LevelObjType::PICKUP, 2, 3),
+    L_ONE(LevelObjType::PICKUP, 2, 5),
+    L_ONE(LevelObjType::PICKUP, 2, 7),
+    L_MANY(LevelObjType::PICKUP, L_HORIZONTAL, 2, 4, 7),
+
+    L_MANY(LevelObjType::TIMED_WALL, L_HORIZONTAL, 7, 0, 4),
+    L_MANY(LevelObjType::TIMED_WALL, L_HORIZONTAL, 7, 3, 5),
+    L_MANY(LevelObjType::SOLID_WALL, L_HORIZONTAL, 3, 6,3),
+    L_MANY(LevelObjType::SOLID_WALL, L_HORIZONTAL, 3, 3,6),
+    L_MANY(LevelObjType::SOLID_WALL, L_HORIZONTAL, 3, 7,7),
+#ifdef TEST_LEVEL_SOLUTION
+    L_CMD_ONE(4),
+    PACK(CMD_MOVE, CMD_PICKUP),
+    PACK(CMD_MOVE, CMD_MOVE),
+    PACK(CMD_PICKUP, CMD_TURN_RIGHT),
+    PACK(CMD_MOVE, CMD_END),
+    L_CMD_TWO(4),
+    PACK(CMD_MOVE, CMD_MOVE), 
+    PACK(CMD_TURN_LEFT, CMD_MOVE),
+    PACK(CMD_TURN_RIGHT, CMD_MOVE),
+    PACK(CMD_PICKUP, CMD_END),
+    L_CMD_MAIN(4),
+    PACK(CMD_JMP_TWO, CMD_JMP_ONE),
+    PACK(CMD_JMP_ONE, CMD_JMP_TWO),
+    PACK(CMD_JMP_TWO, CMD_TURN_RIGHT),
+    PACK(CMD_JMP_ONE, CMD_END),
+#else
+    L_CMD_TWO(5),
+    PACK(CMD_MOVE, CMD_MOVE), 
+    PACK(CMD_MOVE, CMD_MOVE),
+    PACK(CMD_MOVE, CMD_MOVE),
+    PACK(CMD_MOVE, CMD_MOVE),
+    PACK(CMD_MOVE, CMD_END),
+#endif
+    // Put L_END at the end of the level design. If you don't have it, the program will keep going 
+    L_END,
+);
+
+NEXT_LEVEL(
+    (LETTERS_12("DISCO NIGHT")), 
+    Difficulty::HARD, 
+    L_PLAYER(Facing::Down, 5, 4),
+    L_MANY(LevelObjType::PICKUP, L_VERTICAL, 7,1,1),
+    L_MANY(LevelObjType::PICKUP, L_VERTICAL, 7,2,1),
+    L_MANY(LevelObjType::PICKUP, L_VERTICAL, 7,4,1),
+    L_MANY(LevelObjType::PICKUP, L_VERTICAL, 7,5,1),
+    L_MANY(LevelObjType::PICKUP, L_VERTICAL, 7,7,1),
+    L_MANY(LevelObjType::PICKUP, L_VERTICAL, 7,8,1),
+    L_ONE(LevelObjType::PICKUP, 3,1),
+    L_ONE(LevelObjType::PICKUP, 6,1),
+    L_ONE(LevelObjType::PICKUP, 3,4),
+    L_ONE(LevelObjType::PICKUP, 6,4),
+    L_ONE(LevelObjType::PICKUP, 3,7),
+    L_ONE(LevelObjType::PICKUP, 6,7),
+    L_MANY(LevelObjType::HURT_WALL, L_VERTICAL, 2,3,2),
+    L_MANY(LevelObjType::HURT_WALL, L_VERTICAL, 2,6,2),
+    L_MANY(LevelObjType::HURT_WALL, L_VERTICAL, 2,3,5),
+    L_MANY(LevelObjType::HURT_WALL, L_VERTICAL, 2,6,5),
+    L_MANY(LevelObjType::TIMED_WALL, L_VERTICAL, 9,0,0),
+    L_MANY(LevelObjType::TIMED_WALL, L_VERTICAL, 9,9,0),
+    L_MANY(LevelObjType::TIMED_WALL, L_HORIZONTAL, 8,1,0),
+    L_MANY(LevelObjType::TIMED_WALL, L_HORIZONTAL, 8,1,8),
+
+
+#ifdef TEST_LEVEL_SOLUTION
+    L_CMD_ONE(4), 
+    PACK(CMD_JMP_TWO, CMD_JMP_TWO),
+    PACK(CMD_JMP_TWO, CMD_TURN_RIGHT),
+    PACK(CMD_JMP_TWO, CMD_JMP_TWO),
+    PACK(CMD_JMP_TWO, CMD_END),
+
+
+    L_CMD_TWO(4), 
+    PACK(CMD_MOVE, CMD_PICKUP), 
+    PACK(CMD_MOVE, CMD_PICKUP), 
+    PACK(CMD_MOVE, CMD_PICKUP),
+    PACK(CMD_TURN_LEFT, CMD_END),
+
+    L_CMD_MAIN(4),
+    PACK(CMD_JMP_ONE, CMD_JMP_ONE),
+    PACK(CMD_JMP_ONE, CMD_MOVE),
+    PACK(CMD_JMP_ONE, CMD_JMP_ONE),
+    PACK(CMD_JMP_ONE, CMD_JMP_ONE),
+
+#else 
+#endif
+    // Put L_END at the end of the level design. If you don't have it, the program will keep going 
+    L_END,
+)
+
+NEXT_LEVEL(
     (LETTERS_14("GRATS YOU WON")),
     Difficulty::HARD,
     L_PLAYER(Facing::Up, 5, 4),
@@ -347,16 +444,6 @@ NEXT_LEVEL(
     L_END,
 );
 
-// extern const uint8_t LEVEL_AMAZING[] = {
-//     // L_MANY(LevelObjType::SOLID_WALL, L_HORIZONTAL, 4, 0, 3),
-//     // L_MANY(LevelObjType::SOLID_WALL, L_HORIZONTAL, 5, 5, 3),
-//     L_ONE(LevelObjType::PICKUP, 5, 1),
-//     L_PLAYER(Facing::Up, 5, 5),
-//     L_CMD_MAIN(3),
-//     PACK(CMD_MOVE, CMD_MOVE), PACK(CMD_MOVE, CMD_MOVE),
-//     PACK(CMD_PICKUP, CMD_END), 
-//     L_END,
-// };
 
 #define CONCAT_LEVEL_DIFFICULTY(x) CONCAT(LEVEL_DIFFICULTY_, x)
 #define CONCAT_LEVEL_TITLE(x) CONCAT(LEVEL_TITLE_, x)

@@ -40,7 +40,7 @@ extern "C" LevelObjType load_metatile_at_coord(uint8_t x, uint8_t y);
 extern "C" void update_level_buff(uint8_t tile_x, uint8_t tile_y, LevelObjType val);
 extern "C" void update_speed_setting();
 
-constexpr uint8_t LEVEL_COUNT = 12;
+constexpr uint8_t LEVEL_COUNT = 14;
 
 SPLIT_ARRAY_DEFINE(all_levels);
 SPLIT_ARRAY_DEFINE(level_titles);
