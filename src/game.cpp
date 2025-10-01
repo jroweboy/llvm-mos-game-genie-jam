@@ -87,6 +87,7 @@ extern const Letter WORD_JMP_1[] = { LETTERS_7( "CALL 1" ) };
 extern const Letter WORD_JMP_2[] = { LETTERS_7( "CALL 2" ) };
 extern const Letter WORD_ERROR[] = { LETTERS_6( "ERROR" ) };
 extern const Letter WORD_YIELD[] = { LETTERS_6( "YIELD" ) };
+extern const Letter WORD_UNUSED[] = { LETTERS_4( "OFF" ) };
 
 SPLIT_ARRAY(command_strings,
     WORD_TURN_LEFT,
@@ -99,7 +100,8 @@ SPLIT_ARRAY(command_strings,
     WORD_JMP_1,
     WORD_JMP_2,
     WORD_ERROR,
-    WORD_YIELD
+    WORD_YIELD,
+    WORD_UNUSED
 );
 
 constinit FIXED const uint8_t command_to_string_lut[9] = {
@@ -161,7 +163,7 @@ static void level_completed() {
 void update_sub_attribute(uint8_t new_val) {
     auto old_sub = current_sub;
     if (new_val == 3)
-        wrapped_inc(current_sub, 3);
+        wrapped_inc(current_sub, (uint8_t)level_difficulty[level]+1);
     else
         current_sub = new_val;
     // If we are full, just lag a frame to prevent overflowing the buffer
@@ -279,7 +281,11 @@ static void draw_command_string(uint8_t id) {
     clear_command_string(true);
     // check if we are trying to jump to the current sub
     // then its a yield statement
-    if ((current_sub == 1 && id == CMD_JMP_ONE+1)
+    if (id == CMD_JMP_ONE+1 && level_difficulty[level] < Difficulty::MEDIUM) {
+        id = CMD_YIELD+2;
+    } else if (id == CMD_JMP_TWO+1 && level_difficulty[level] < Difficulty::HARD) {
+        id = CMD_YIELD+2;
+    } else if ((current_sub == 1 && id == CMD_JMP_ONE+1)
         || (current_sub == 2 && id == CMD_JMP_TWO+1)) {
         id = CMD_YIELD+1;
     } else if (current_sub == 2 && id == CMD_JMP_ONE+1) {
@@ -513,6 +519,11 @@ __attribute__((noinline)) static void handle_edit_main_mode() {
             uint8_t x = (cursor->x - X_LO_BOUND) / 16;
             uint8_t y = (cursor->y - Y_LO_BOUND) / 16;
             uint8_t idx = x + y * 3;
+            if (idx == CMD_JMP_ONE+1 && level_difficulty[level] < Difficulty::MEDIUM) {
+                return;
+            } else if (idx == CMD_JMP_TWO+1 && level_difficulty[level] < Difficulty::HARD) {
+                return;
+            }
             // don't let sub 2 jump to sub 1!
             if (!(idx == CMD_JMP_ONE+1 && current_sub == 2)) {
                 update_command_list(cursor_command_lut[idx]);
@@ -631,6 +642,15 @@ static bool execute_action(uint8_t slot) {
     auto cmd = commands[command_index[current_sub]];
     auto obj = objects[slot];
     auto cmdcursor = objects[2];
+
+    // Check to see if the player is standing on a timed wall that turned into HURT this frame
+    LevelObjType ttype = load_metatile_at_coord(obj.x, obj.y);
+    if (ttype == LevelObjType::HURT_WALL) {
+        // player died to the wall
+        player_died = true;
+        return false;
+    }
+
     switch ((Command)cmd) {
     case CMD_MOVE: {
         Coord target;
@@ -802,6 +822,7 @@ __attribute__((noinline)) static void handle_execute_main_mode(uint8_t base_fram
         // check if its time to end the run.
         if (current_sub == 0 && command_index[0] == 0) {
             // end conditions
+            finished_execute = true;
             return;
         } else if (command_index[current_sub] == command_lower_bound_lut[current_sub]) {
             // work around an issue when returning from sub 2 -> 1 and the jmp command
@@ -914,4 +935,5 @@ void game_mode_execute_main() {
 
     memcpy((void*)&objects, original_objs, sizeof(Object) * 8);
     set_game_mode(MODE_EDIT);
+    cursor.frame = 0;
 }

@@ -141,8 +141,6 @@ static void create_wall(uint8_t *current_level, LevelObjType type) {
 
 const uint8_t level_hud[] = {
     M_HORZ(3, 2, 2, SEPARATOR, SUB, SEPARATOR),
-    M_HORZ(3, 2, 12, SEPARATOR, ONE, SEPARATOR),
-    M_HORZ(3, 2, 20, SEPARATOR, TWO, SEPARATOR),
     T_HORZ_REPT(20, 10, 1, MTILE_BL(BORDER_TOP)),
     T_HORZ_REPT(20, 10, 20, MTILE_TL(BORDER_BOT)),
     T_VERT_REPT(18, 9, 2, MTILE_BR(BORDER_LEFT)),
@@ -151,16 +149,22 @@ const uint8_t level_hud[] = {
     T_ONE(30, 1, MTILE_BL(BORDER_TR_CORNER)),
     T_ONE(9, 20, MTILE_TR(BORDER_BL_CORNER)),
     T_ONE(30, 20, MTILE_TL(BORDER_BR_CORNER)),
-    NT_UPD_EOF
-};
-
-const uint8_t level_hud_2[] = {
     A_HORZ(2, 8, 20, 0xc0, 0x90),
     A_HORZ(2, 8, 24, 0x80, 0x7c),
     M_HORZ(3, 10, 22, TURN_LEFT, MOVE, TURN_RIGHT),
     M_HORZ(3, 10, 24, WAIT, BLANK, PICKUP),
     M_HORZ(3, 10, 26, SUB, ONE, TWO),
     M_HORZ(1, 26, 26, SMALL_X),
+    NT_UPD_EOF
+};
+
+const uint8_t level_hud_medium_diff[] = {
+    M_HORZ(3, 2, 12, SEPARATOR, ONE, SEPARATOR),
+    NT_UPD_EOF
+};
+
+const uint8_t level_hud_hard_diff[] = {
+    M_HORZ(3, 2, 20, SEPARATOR, TWO, SEPARATOR),
     NT_UPD_EOF
 };
 
@@ -179,21 +183,54 @@ void update_speed_setting() {
     update_attribute(28, 26, pal);
 }
 
-void draw_hud([[maybe_unused]] uint8_t level_num) {
+void draw_hud(uint8_t level_num) {
     // TODO check the level num to see what is enabled
     memset(attribute_buffer, 0, sizeof(attribute_buffer));
     vram_adr(NAMETABLE_A);
     vram_fill(0, 0x400);
     set_vram_update(level_hud);
-    flush_vram_update2();
-    set_vram_update(level_hud_2);
     attribute_buffer[0xea-0xc0] = 0xc0;
     attribute_buffer[0xeb-0xc0] = 0x90;
     attribute_buffer[0xf2-0xc0] = 0x80;
     attribute_buffer[0xf3-0xc0] = 0x7c;
     flush_vram_update2();
+
+    if (level_difficulty[level_num] > Difficulty::EASY) {
+        set_vram_update(level_hud_medium_diff);
+        flush_vram_update2();
+        if (level_difficulty[level_num] > Difficulty::MEDIUM) {
+            set_vram_update(level_hud_hard_diff);
+            flush_vram_update2();
+        }
+    }
+
     set_vram_buffer();
     update_speed_setting();
+    flush_vram_update2();
+
+    // Draw all of the WAIT symbols
+    for (uint8_t i=0; i<12; i++) {
+        update_command_list(Command::CMD_WAIT);
+        flush_vram_update2();
+    }
+    current_sub++;
+    
+    if (level_difficulty[level_num] > Difficulty::EASY) {
+        for (uint8_t i=0; i<9; i++) {
+            update_command_list(Command::CMD_WAIT);
+            flush_vram_update2();
+        }
+        if (level_difficulty[level_num] > Difficulty::MEDIUM) {
+            current_sub++;
+            for (uint8_t i=0; i<9; i++) {
+                update_command_list(Command::CMD_WAIT);
+                flush_vram_update2();
+            }
+        }
+    }
+
+    current_sub = 2;
+    update_sub_attribute();
     flush_vram_update2();
 }
 

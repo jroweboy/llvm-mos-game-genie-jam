@@ -26,6 +26,12 @@ enum class Facing : uint8_t {
     Left
 };
 
+enum class Difficulty : uint8_t {
+    EASY,
+    MEDIUM,
+    HARD
+};
+
 void draw_hud(uint8_t level_num);
 void load_level(uint8_t level_num);
 void draw_pickup(Point p);
@@ -34,11 +40,13 @@ extern "C" LevelObjType load_metatile_at_coord(uint8_t x, uint8_t y);
 extern "C" void update_level_buff(uint8_t tile_x, uint8_t tile_y, LevelObjType val);
 extern "C" void update_speed_setting();
 
-constexpr uint8_t LEVEL_COUNT = 6;
+constexpr uint8_t LEVEL_COUNT = 8;
 
 SPLIT_ARRAY_DEFINE(all_levels);
 SPLIT_ARRAY_DEFINE(level_titles);
 extern const soa::Array<uint16_t, LEVEL_COUNT> level_passwords;
+extern const Difficulty level_difficulty[LEVEL_COUNT];
+
 // SPLIT_ARRAY_DEFINE(level_passwords);
 
 extern const Letter password_alphabet[16];
@@ -157,13 +165,14 @@ constexpr uint8_t L_FACING_LEFT = 0b11 << 6;
 #define UNPAREN(...) __VA_ARGS__
 #define CONCAT_IMPL(x, y) x ## y
 #define CONCAT(x, y) CONCAT_IMPL(x, y)
-#define LEVEL_IMPL(c, name,  ...) \
+#define LEVEL_IMPL(c, name, diff, ...) \
     CONCAT(extern const Letter LEVEL_TITLE_, c)[] = { UNPAREN name }; \
+    CONCAT(constexpr Difficulty LEVEL_DIFFICULTY_, c) = (diff); \
     CONCAT(extern const uint8_t LEVEL_DATA_, c)[] = { __VA_ARGS__ }; \
     CONCAT(constexpr uint16_t LEVEL_PASSWORD_, c) = generate_password(c);
 
-#define NEXT_LEVEL(name, ...) \
-    LEVEL_IMPL(__COUNTER__, name, __VA_ARGS__)
+#define NEXT_LEVEL(name, diff, ...) \
+    LEVEL_IMPL(__COUNTER__, name, diff, __VA_ARGS__)
 
 // Generate a list of numbers of N-1
 #define GENERATE_1() 0

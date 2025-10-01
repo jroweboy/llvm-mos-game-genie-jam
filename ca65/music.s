@@ -20,9 +20,9 @@ init_sabre:
     sta soundRegion
 	jsr sabre_initAPU
 
-    ; lda #0
-    ; sta currentTrack
-	; jsr sabre_playTrack
+    lda #0
+    sta currentTrack
+	jsr sabre_playTrack
 
 .segment "_pnmi_p200"
 run_sabre_driver:

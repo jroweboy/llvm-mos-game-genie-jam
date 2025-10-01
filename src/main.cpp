@@ -13,14 +13,11 @@
 
 // Include our own player update function for the movable sprite.
 #include "common.hpp"
-#include "fixed_point2.hpp"
 #include "graphics.hpp"
 #include "game.hpp"
 #include "text_render.hpp"
 #include "levels.hpp"
 #include "metatile.hpp"
-
-using namespace fixedpoint_literals;
 
 
 // Trim the pal bright table back to just what we use
@@ -259,42 +256,6 @@ FIXED const uint8_t starfield_screen[] = {
     NT_UPD_EOF
 };
 
-struct Star {
-    fu8_8 x;
-    fu8_8 y;
-    fs8_8 x_vel;
-    fs8_8 y_vel;
-    uint8_t attr;
-    uint8_t tile;
-};
-#define SOA_STRUCT Star
-#define SOA_MEMBERS MEMBER(x) MEMBER(y) MEMBER(x_vel) MEMBER(y_vel) MEMBER(attr) MEMBER(tile)
-#include <soa-struct.inc>
-
-// FIXED constexpr const uint8_t STAR_X_VELOCITY_HI[] = {
-//     ((uint16_t)((-0.75_s8_8).get()) >> 8) & 0xff,
-//     ((uint16_t)((-1.75_s8_8).get()) >> 8) & 0xff,
-//     ((uint16_t)((-2.75_s8_8).get()) >> 8) & 0xff,
-//     ((uint16_t)((-3.75_s8_8).get()) >> 8) & 0xff,
-// };
-// FIXED constexpr const uint8_t STAR_X_VELOCITY_LO[] = {
-//     ((uint16_t)((-0.75_s8_8).get())) & 0xff,
-//     ((uint16_t)((-1.75_s8_8).get())) & 0xff,
-//     ((uint16_t)((-2.75_s8_8).get())) & 0xff,
-//     ((uint16_t)((-3.75_s8_8).get())) & 0xff,
-// };
-// FIXED constexpr const uint8_t STAR_Y_VELOCITY_HI[] = {
-//     ((uint16_t)((0.75_s8_8).get()) >> 8) & 0xff,
-//     ((uint16_t)((1.75_s8_8).get()) >> 8) & 0xff,
-//     ((uint16_t)((2.75_s8_8).get()) >> 8) & 0xff,
-//     ((uint16_t)((3.75_s8_8).get()) >> 8) & 0xff,
-// };
-// FIXED constexpr const uint8_t STAR_Y_VELOCITY_LO[] = {
-//     ((uint16_t)((0.75_s8_8).get())) & 0xff,
-//     ((uint16_t)((1.75_s8_8).get())) & 0xff,
-//     ((uint16_t)((2.75_s8_8).get())) & 0xff,
-//     ((uint16_t)((3.75_s8_8).get())) & 0xff,
-// };
 FIXED constexpr const int8_t STAR_X_VELOCITY[] = {
     -1, -2, -3, -4
 };
@@ -350,14 +311,17 @@ static uint8_t input_password[4] = {};
 static uint8_t cursor_selected = 0;
 static uint8_t input_position = 0;
 
+
+static bool exit_starfield_effect;
 __attribute__((noinline)) static void handle_password_input() {
-    auto input = pad_trigger(0);
+    auto input = get_pad_new(0);
     auto cursor = objects[SLOT_MAINCURSOR];
     auto inputcursor = objects[SLOT_CMDCURSOR];
     // password input options
     if (input & PAD_SELECT) {
         pal_fade(false);
         set_game_mode(MODE_RESET);
+        exit_starfield_effect = true;
         return;
     }
     if (input & PAD_START) {
@@ -373,6 +337,7 @@ __attribute__((noinline)) static void handle_password_input() {
                 ppu_off();
                 level = i;
                 set_game_mode(MODE_LOAD_LEVEL);
+                exit_starfield_effect = true;
                 return;
             }
         }
@@ -407,6 +372,10 @@ __attribute__((noinline)) static void handle_password_input() {
     cursor_selected = (cursor_y == 104) ? tile_x_pos : tile_x_pos + 8;
 }
 
+__attribute__((noinline)) int myrand() {
+    return rand();
+}
+
 __attribute__((cold)) static void update_starfield(bool password_input) {
     // uint8_t star_x_lo[32];
     uint8_t star_x[32];
@@ -416,9 +385,9 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
     auto cursor = objects[SLOT_MAINCURSOR];
 
     for (uint8_t i = 31; i < 128; i--) {
-        star_x[i] = (rand() & 0xff);
-        star_y[i] = (rand() & 0xff);
-        uint8_t type = rand() & 0x03;
+        star_x[i] = (myrand() & 0xff);
+        star_y[i] = (myrand() & 0xff);
+        uint8_t type = myrand() & 0x03;
         star_type[i] = type;
     }
 
@@ -433,33 +402,12 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
     pal_fade(true);
     while (true) {
         ppu_wait_nmi();
-        oam_clear();
-        auto input = pad_trigger(0);
-
-        OAM_BUF[0] = 55;
-        OAM_BUF[1] = 0xf;
-        OAM_BUF[2] = 0x0;
-        OAM_BUF[3] = 248;
-        SPRID += 4;
+        SPRID = 4;
         // move the stars
         for (uint8_t i = 31; i < 128; i--) {
-            // uint8_t boost = star_type[i] & 0b11111100;
             uint8_t type = star_type[i];
             star_x[i] += STAR_X_VELOCITY[type];
             star_y[i] += STAR_Y_VELOCITY[type];
-            // Word x_pos{.lo = star_x_lo[i], .hi = star_x_hi[i]};
-            // Word x_vel{.lo = STAR_X_VELOCITY_LO[type], .hi = STAR_X_VELOCITY_HI[type]};
-            // Word x_res{.raw = (x_pos.raw + x_vel.raw) };
-            // star_x_lo[i] = x_res.lo;
-            // star_x_hi[i] = x_res.hi;
-
-            // Word y_vel{.lo = star_y_vel_lo[i], .hi = star_y_vel_hi[i]};
-            // Word y_vel{.lo = STAR_Y_VELOCITY_LO[type], .hi = STAR_Y_VELOCITY_HI[type]};
-            // Word y_pos{.lo = star_y_lo[i], .hi = star_y_hi[i]};
-            // Word y_res{.raw = (y_pos.raw + y_vel.raw) };
-            // star_y_lo[i] = y_res.lo;
-            // star_y_hi[i] = y_res.hi;
-
             auto real_y = star_y[i] > 56 && star_y[i] < 158 ? 255 : star_y[i];
             OAM_BUF[SPRID + 0] = real_y;
             OAM_BUF[SPRID + 3] = star_x[i];
@@ -467,42 +415,21 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
             OAM_BUF[SPRID + 2] = STAR_ATTR_LUT[type];
             SPRID += 4;
             if (star_y[i] > 250) {
-                star_x[i] = (rand() & 0xff);
-                star_type[i] = rand() & 0x03;
+                star_x[i] = (myrand() & 0xff);
+                star_type[i] = myrand() & 0x03;
             }
         }
-
         // wait for sprite zero
         delay_and_hide_sprites();
 
-        // NOTE: THIS MUST BE CONSTANT TIME (not true anymore?)
-        // for (uint8_t i = 31; i < 128; i--) {
-        //     // uint8_t real_y;
-        //     // __asm__(R"ASM(
-        //     //     cmp #56 - 1  ; 2   2
-        //     //     bcc .L1      ; 2-3 4
-        //     //     cmp #157   ; 2   6
-        //     //     bcs .L2      ; 2-3 8
-        //     //     lda #$ff     ; 2   10
-        //     //     jmp .Exit    ; 3   13
-        //     // .L1:
-        //     //     nop          ; 2   7
-        //     //     nop          ; 2   9
-        //     // .L2:
-        //     //     nop          ; 2   11
-        //     //     nop          ; 2   13
-        //     // .Exit:
-        //     //     )ASM"
-        //     //     : "=a"(real_y)
-        //     //     : "a"(star_y_hi[i])
-        //     //     : "p"
-        //     // );
-        //     OAM_BUF[SPRID + 0] = real_y;
-        //     OAM_BUF[SPRID + 3] = star_x_hi[i];
-        //     OAM_BUF[SPRID + 1] = STAR_TILE_LUT[type];
-        //     OAM_BUF[SPRID + 2] = STAR_ATTR_LUT[type];
-        //     SPRID += 4;
-        // }
+
+        OAM_BUF[0] = 55;
+        OAM_BUF[1] = 0xf;
+        OAM_BUF[2] = 0x0;
+        OAM_BUF[3] = 248;
+
+        auto input = pad_trigger(0);
+
         if (!password_input) {
             if (input & (PAD_START | PAD_A | PAD_B | PAD_SELECT) && !victory_mode) {
                 break;
@@ -520,7 +447,8 @@ __attribute__((cold)) static void update_starfield(bool password_input) {
         if (cursor.timer != 0) {
             cursor.timer--;
         }
-
+        if (game_mode != MODE_LOAD_LEVEL)
+            break;
     }
     pal_fade(false);
     ppu_off();
@@ -581,7 +509,8 @@ void game_mode_enter_password() {
     update_starfield(true);
 }
 
-static void reset_cursors() {
+__attribute__((noinline)) static void reset_cursors() {
+
 constexpr uint8_t X_LO_BOUND = (10 * 8);
 constexpr uint8_t Y_LO_BOUND = (22 * 8);
     auto cursor = objects[SLOT_MAINCURSOR];
@@ -591,23 +520,23 @@ constexpr uint8_t Y_LO_BOUND = (22 * 8);
     cursor.target_x = X_LO_BOUND;
     cursor.y = Y_LO_BOUND;
     cursor.target_y = Y_LO_BOUND;
-    cursor.x_vel = 0;
-    cursor.y_vel = 0;
-    cursor.frame = 0;
+    // cursor.x_vel = 0;
+    // cursor.y_vel = 0;
+    // cursor.frame = 0;
     cursor.state = 16;
     cursor.anim_state = 16;
     cursor.long_timer = 4;
-    cursor.timer = 0;
-    cursor.anim_timer = 0;
-    cursor.param2 = 0;
-    cursor.facing_dir = 0;
+    // cursor.timer = 0;
+    // cursor.anim_timer = 0;
+    // cursor.param2 = 0;
+    // cursor.facing_dir = 0;
 
     auto cmdcursor = objects[SLOT_CMDCURSOR];
     cmdcursor.type = CURSOR;
-    cmdcursor.is_moving = false;
-    cmdcursor.x_vel = 0;
-    cmdcursor.y_vel = 0;
-    cmdcursor.frame = 0;
+    // cmdcursor.is_moving = false;
+    // cmdcursor.x_vel = 0;
+    // cmdcursor.y_vel = 0;
+    // cmdcursor.frame = 0;
     cmdcursor.state = 16;
     cmdcursor.anim_state = 16;
     // Reset level variables
@@ -657,7 +586,6 @@ void game_mode_load_level() {
     // generate_password(level);
     render_string(Nametable::A, x, y, title);
     render_string(Nametable::A, 3, 15, "PASSWORD"_l);
-    // const Letter* pass = (const Letter*)SPLIT_ARRAY_POINTER(level_passwords, level);
     auto password = level_passwords[level].get();
     auto [xhi, xlo] = UNPACK((uint8_t)((password >> 8) & 0xff));
     auto [yhi, ylo] = UNPACK((password >> 0) & 0xff);
@@ -675,24 +603,6 @@ void game_mode_load_level() {
     //     prev_mode = MODE_LOAD_LEVEL;
     draw_hud(level);
     // }
-
-    // Draw all of the WAIT symbols
-    for (uint8_t i=0; i<12; i++) {
-        update_command_list(Command::CMD_WAIT);
-        flush_vram_update2();
-    }
-    update_sub_attribute();
-    for (uint8_t i=0; i<9; i++) {
-        update_command_list(Command::CMD_WAIT);
-        flush_vram_update2();
-    }
-    update_sub_attribute();
-    for (uint8_t i=0; i<9; i++) {
-        update_command_list(Command::CMD_WAIT);
-        flush_vram_update2();
-    }
-    update_sub_attribute();
-    flush_vram_update2();
 
     load_level(level);
     ppu_wait_nmi();
@@ -723,10 +633,6 @@ int main() {
     // Start off by disabling the PPU rendering, allowing us to upload data safely to the nametable (background)
     ppu_off();
 
-    // Clear all sprites off screen. RAM state is random on boot so there is a bunch of garbled sprites on screen
-    // by default.
-    oam_clear();
-
     // Set to use 8x8 sprite mode. I doubt 8x16 sprite mode will help much with the game genie CHR :)
     oam_size(0);
 
@@ -747,6 +653,8 @@ int main() {
 
     // Now time to start the main game loop
     while (true) {
+        // Wait for the next frame before looping again
+        ppu_wait_nmi();
         // At the start of the frame, poll the controller to get the latest state.
         pad_poll(0);
         // Once a frame, clear the sprites out so that we don't have leftover sprites.
@@ -783,9 +691,6 @@ int main() {
             game_mode_enter_password();
             break;
         }
-        
-        // All done! Wait for the next frame before looping again
-        ppu_wait_nmi();
     }
     // Tell the compiler we are never stopping the game loop!
     __builtin_unreachable();
