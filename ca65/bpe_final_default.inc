@@ -1,7 +1,7 @@
 _default_New_song_header:
 	.byte 5
 	.byte 150
-	.byte 32
+	.byte 72
 	.word _default_New_song_pulse1
 	.word _default_New_song_pulse2
 	.word _default_New_song_triangle
@@ -41,6 +41,46 @@ _default_New_song_pulse1:
 	.word _default_New_song_pulse1_pattern10
 	.word _default_New_song_pulse1_pattern11
 	.word _default_New_song_pulse1_pattern12
+	.word _default_New_song_pulse1_pattern1
+	.word _default_New_song_pulse1_pattern2
+	.word _default_New_song_pulse1_pattern3
+	.word _default_New_song_pulse1_pattern4
+	.word _default_New_song_pulse1_pattern5
+	.word _default_New_song_pulse1_pattern6
+	.word _default_New_song_pulse1_pattern7
+	.word _default_New_song_pulse1_pattern8
+	.word _default_New_song_pulse1_pattern1
+	.word _default_New_song_pulse1_pattern2
+	.word _default_New_song_pulse1_pattern3
+	.word _default_New_song_pulse1_pattern4
+	.word _default_New_song_pulse1_pattern5
+	.word _default_New_song_pulse1_pattern6
+	.word _default_New_song_pulse1_pattern7
+	.word _default_New_song_pulse1_pattern13
+	.word _default_New_song_pulse1_pattern9
+	.word _default_New_song_pulse1_pattern10
+	.word _default_New_song_pulse1_pattern11
+	.word _default_New_song_pulse1_pattern12
+	.word _default_New_song_pulse1_pattern1
+	.word _default_New_song_pulse1_pattern2
+	.word _default_New_song_pulse1_pattern3
+	.word _default_New_song_pulse1_pattern4
+	.word _default_New_song_pulse1_pattern5
+	.word _default_New_song_pulse1_pattern6
+	.word _default_New_song_pulse1_pattern7
+	.word _default_New_song_pulse1_pattern8
+	.word _default_New_song_pulse1_pattern1
+	.word _default_New_song_pulse1_pattern2
+	.word _default_New_song_pulse1_pattern3
+	.word _default_New_song_pulse1_pattern4
+	.word _default_New_song_pulse1_pattern5
+	.word _default_New_song_pulse1_pattern6
+	.word _default_New_song_pulse1_pattern7
+	.word _default_New_song_pulse1_pattern13
+	.word _default_New_song_pulse1_pattern9
+	.word _default_New_song_pulse1_pattern10
+	.word _default_New_song_pulse1_pattern11
+	.word _default_New_song_pulse1_pattern14
 _default_New_song_pulse1_pattern0:
 	.byte NL48,INST|SLNT,D00
 _default_New_song_pulse1_pattern1:
@@ -93,11 +133,15 @@ _default_New_song_pulse1_pattern12:
 	.byte NL6,INST|CONT|18,E4,NL2,INST|19,INST|CONT|18,FS4,G4,NL4,FS4
 	.byte A4,NL2,D5,INST|CONT|19,A4,NL12,INST|CONT|18,E5,NL1,INST|CONT|21
 	.byte D3,E3,FS3,A3,D4,E4,FS4,A4,D5,E5
-	.byte FS5,A5,BXX,$0C
+	.byte FS5,A5,D00
 _default_New_song_pulse1_pattern13:
 	.byte NL12,INST|CONT|13,G4,NL8,INST|14,NL2,INST|CONT|13,A4,G4,NL6
 	.byte A4,INST|14,NL1,INST|CONT|15,CS5,D5,CS5,INST|SLNT,INST|CONT|15,A4
 	.byte INST|SLNT,NL2,INST|CONT|18,B2,B3,DS3,D00
+_default_New_song_pulse1_pattern14:
+	.byte NL6,INST|CONT|18,E4,NL2,INST|19,INST|CONT|18,FS4,G4,NL4,FS4
+	.byte D4,NL2,A3,INST|CONT|19,D4,NL6,INST|CONT|18,GS3,INST|19,NL2
+	.byte INST|23,INST|SLNT,INST|23,NL6,INST|SLNT,D00
 
 _default_New_song_pulse2:
 	.word _default_New_song_pulse2_pattern0
@@ -132,6 +176,46 @@ _default_New_song_pulse2:
 	.word _default_New_song_pulse2_pattern5
 	.word _default_New_song_pulse2_pattern6
 	.word _default_New_song_pulse2_pattern7
+	.word _default_New_song_pulse2_pattern1
+	.word _default_New_song_pulse2_pattern1
+	.word _default_New_song_pulse2_pattern1
+	.word _default_New_song_pulse2_pattern1
+	.word _default_New_song_pulse2_pattern2
+	.word _default_New_song_pulse2_pattern2
+	.word _default_New_song_pulse2_pattern2
+	.word _default_New_song_pulse2_pattern3
+	.word _default_New_song_pulse2_pattern1
+	.word _default_New_song_pulse2_pattern1
+	.word _default_New_song_pulse2_pattern1
+	.word _default_New_song_pulse2_pattern1
+	.word _default_New_song_pulse2_pattern2
+	.word _default_New_song_pulse2_pattern2
+	.word _default_New_song_pulse2_pattern2
+	.word _default_New_song_pulse2_pattern3
+	.word _default_New_song_pulse2_pattern4
+	.word _default_New_song_pulse2_pattern5
+	.word _default_New_song_pulse2_pattern6
+	.word _default_New_song_pulse2_pattern7
+	.word _default_New_song_pulse2_pattern1
+	.word _default_New_song_pulse2_pattern1
+	.word _default_New_song_pulse2_pattern1
+	.word _default_New_song_pulse2_pattern1
+	.word _default_New_song_pulse2_pattern2
+	.word _default_New_song_pulse2_pattern2
+	.word _default_New_song_pulse2_pattern2
+	.word _default_New_song_pulse2_pattern3
+	.word _default_New_song_pulse2_pattern1
+	.word _default_New_song_pulse2_pattern1
+	.word _default_New_song_pulse2_pattern1
+	.word _default_New_song_pulse2_pattern1
+	.word _default_New_song_pulse2_pattern2
+	.word _default_New_song_pulse2_pattern2
+	.word _default_New_song_pulse2_pattern2
+	.word _default_New_song_pulse2_pattern3
+	.word _default_New_song_pulse2_pattern4
+	.word _default_New_song_pulse2_pattern5
+	.word _default_New_song_pulse2_pattern6
+	.word _default_New_song_pulse2_pattern8
 _default_New_song_pulse2_pattern0:
 	.byte NL48,INST|SLNT,D00
 _default_New_song_pulse2_pattern1:
@@ -182,6 +266,10 @@ _default_New_song_pulse2_pattern7:
 	.byte NL4,INST|CONT|17,C1,NL2,C2,C1,G1,C1,NL4,B0
 	.byte NL2,B1,B0,FS1,B0,NL4,E1,NL2,E2,E1
 	.byte E2,B1,E1,B1,E2,INST|CONT|8,E3,B3,E4,D00
+_default_New_song_pulse2_pattern8:
+	.byte NL4,INST|CONT|17,C1,NL2,C2,C1,G1,C1,NL4,B0
+	.byte NL2,B1,B0,FS1,B0,NL12,E1,NL2,INST|CONT|23,B2
+	.byte INST|SLNT,INST|23,NL6,INST|SLNT,D00
 
 _default_New_song_triangle:
 	.word _default_New_song_triangle_pattern0
@@ -216,6 +304,46 @@ _default_New_song_triangle:
 	.word _default_New_song_triangle_pattern10
 	.word _default_New_song_triangle_pattern11
 	.word _default_New_song_triangle_pattern12
+	.word _default_New_song_triangle_pattern3
+	.word _default_New_song_triangle_pattern3
+	.word _default_New_song_triangle_pattern3
+	.word _default_New_song_triangle_pattern3
+	.word _default_New_song_triangle_pattern3
+	.word _default_New_song_triangle_pattern3
+	.word _default_New_song_triangle_pattern3
+	.word _default_New_song_triangle_pattern4
+	.word _default_New_song_triangle_pattern5
+	.word _default_New_song_triangle_pattern5
+	.word _default_New_song_triangle_pattern5
+	.word _default_New_song_triangle_pattern7
+	.word _default_New_song_triangle_pattern5
+	.word _default_New_song_triangle_pattern5
+	.word _default_New_song_triangle_pattern5
+	.word _default_New_song_triangle_pattern8
+	.word _default_New_song_triangle_pattern9
+	.word _default_New_song_triangle_pattern10
+	.word _default_New_song_triangle_pattern11
+	.word _default_New_song_triangle_pattern12
+	.word _default_New_song_triangle_pattern3
+	.word _default_New_song_triangle_pattern3
+	.word _default_New_song_triangle_pattern3
+	.word _default_New_song_triangle_pattern3
+	.word _default_New_song_triangle_pattern3
+	.word _default_New_song_triangle_pattern3
+	.word _default_New_song_triangle_pattern3
+	.word _default_New_song_triangle_pattern4
+	.word _default_New_song_triangle_pattern5
+	.word _default_New_song_triangle_pattern5
+	.word _default_New_song_triangle_pattern5
+	.word _default_New_song_triangle_pattern7
+	.word _default_New_song_triangle_pattern5
+	.word _default_New_song_triangle_pattern5
+	.word _default_New_song_triangle_pattern5
+	.word _default_New_song_triangle_pattern8
+	.word _default_New_song_triangle_pattern9
+	.word _default_New_song_triangle_pattern10
+	.word _default_New_song_triangle_pattern11
+	.word _default_New_song_triangle_pattern13
 _default_New_song_triangle_pattern0:
 	.byte NL24,INST|CONT|1,C3,NL18,C3,NL6,INST|6,D00
 _default_New_song_triangle_pattern1:
@@ -286,6 +414,9 @@ _default_New_song_triangle_pattern12:
 	.byte B3,A3,NL12,GS3,NL1,INST|CONT|1,C3,INST|CONT|17,A3,INST|CONT|6
 	.byte C3,INST|CONT|17,GS3,INST|CONT|1,C3,INST|CONT|17,E3,INST|CONT|6,C3,INST|CONT|17
 	.byte B2,INST|CONT|6,C3,INST|CONT|17,E2,NL2,E1,D00
+_default_New_song_triangle_pattern13:
+	.byte NL2,INST|CONT|10,E3,G3,E3,G3,B3,E4,NL4,D4
+	.byte B3,INST|CONT|17,FS3,NL6,E3,E2,INST|CONT|1,C3,INST|6,D00
 
 _default_New_song_noise:
 	.word _default_New_song_noise_pattern0
@@ -320,6 +451,46 @@ _default_New_song_noise:
 	.word _default_New_song_noise_pattern7
 	.word _default_New_song_noise_pattern8
 	.word _default_New_song_noise_pattern9
+	.word _default_New_song_noise_pattern1
+	.word _default_New_song_noise_pattern1
+	.word _default_New_song_noise_pattern1
+	.word _default_New_song_noise_pattern1
+	.word _default_New_song_noise_pattern1
+	.word _default_New_song_noise_pattern1
+	.word _default_New_song_noise_pattern1
+	.word _default_New_song_noise_pattern2
+	.word _default_New_song_noise_pattern3
+	.word _default_New_song_noise_pattern3
+	.word _default_New_song_noise_pattern3
+	.word _default_New_song_noise_pattern4
+	.word _default_New_song_noise_pattern3
+	.word _default_New_song_noise_pattern3
+	.word _default_New_song_noise_pattern3
+	.word _default_New_song_noise_pattern5
+	.word _default_New_song_noise_pattern6
+	.word _default_New_song_noise_pattern7
+	.word _default_New_song_noise_pattern8
+	.word _default_New_song_noise_pattern9
+	.word _default_New_song_noise_pattern1
+	.word _default_New_song_noise_pattern1
+	.word _default_New_song_noise_pattern1
+	.word _default_New_song_noise_pattern1
+	.word _default_New_song_noise_pattern1
+	.word _default_New_song_noise_pattern1
+	.word _default_New_song_noise_pattern1
+	.word _default_New_song_noise_pattern2
+	.word _default_New_song_noise_pattern3
+	.word _default_New_song_noise_pattern3
+	.word _default_New_song_noise_pattern3
+	.word _default_New_song_noise_pattern4
+	.word _default_New_song_noise_pattern3
+	.word _default_New_song_noise_pattern3
+	.word _default_New_song_noise_pattern3
+	.word _default_New_song_noise_pattern5
+	.word _default_New_song_noise_pattern6
+	.word _default_New_song_noise_pattern7
+	.word _default_New_song_noise_pattern8
+	.word _default_New_song_noise_pattern10
 _default_New_song_noise_pattern0:
 	.byte NL4,INST|CONT|2,$0,NL6,INST|3,INST|4,NL2,INST|3,NL6,INST|CONT|5
 	.byte $E,NL4,INST|CONT|2,$0,NL6,INST|3,INST|4,NL2,INST|3,NL6
@@ -356,4 +527,7 @@ _default_New_song_noise_pattern8:
 _default_New_song_noise_pattern9:
 	.byte NL12,INST|CONT|3,$0,NL6,INST|4,INST|CONT|5,$E,NL12,INST|CONT|20,$0
 	.byte NL2,INST|2,INST|7,INST|2,INST|7,$0,INST|16,D00
+_default_New_song_noise_pattern10:
+	.byte NL12,INST|CONT|3,$0,NL6,INST|4,INST|CONT|5,$E,INST|CONT|20,$0,INST|CONT|22
+	.byte $7,NL4,INST|CONT|2,$0,NL2,INST|3,INST|7,INST|4,INST|16,D00
 

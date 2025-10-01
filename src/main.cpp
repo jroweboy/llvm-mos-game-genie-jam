@@ -80,6 +80,13 @@ void set_game_mode(GameMode mode) {
     game_mode = mode;
 }
 
+extern volatile uint8_t currentSFX;
+__attribute__((leaf)) extern "C"  void sabre_playSFX();
+void playsfx(uint8_t sfx) {
+    currentSFX = sfx;
+    sabre_playSFX();
+}
+
 constexpr uint8_t DRAW_END = 0;
 constexpr uint8_t DRAW_STRING = 1;
 constexpr uint8_t DRAW_CURSOR = 2;
@@ -318,7 +325,6 @@ static uint8_t input_password[4] = {};
 static uint8_t cursor_selected = 0;
 static uint8_t input_position = 0;
 
-
 static bool exit_starfield_effect;
 __attribute__((noinline)) static void handle_password_input() {
     auto input = get_pad_new(0);
@@ -332,7 +338,7 @@ __attribute__((noinline)) static void handle_password_input() {
     }
     if (input & PAD_START) {
         // check all passwords for a match
-        for (uint8_t i = 0; i < 4; i++) {
+        for (uint8_t i = 0; i < LEVEL_COUNT; i++) {
             auto password = level_passwords[i];
             auto [xhi, xlo] = UNPACK((uint8_t)((password >> 8) & 0xff));
             auto [yhi, ylo] = UNPACK((password >> 0) & 0xff);
@@ -345,7 +351,9 @@ __attribute__((noinline)) static void handle_password_input() {
                 return;
             }
         }
+        
         // TODO: password bad sfx
+        playsfx(sfx_error);
     }
     if (input & PAD_A) {
         input_password[input_position++] = cursor_selected;

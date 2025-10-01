@@ -9,6 +9,10 @@
 .segment "_pbss_psabre"
 .include "sabre_Misc_RAM.inc"
 
+.global currentSFX
+
+.global sabre_playSFX
+
 .segment "_pinit_psabre"
 init_sabre:
     clc
@@ -29,8 +33,8 @@ run_sabre_driver:
     jsr sabre_soundUpdate
 
 .segment "_ptext_psabre__music"
-.include "bpe_loong_long_music_static.inc"
-.include "bpe_loong_long_music_default.inc"
+.include "bpe_final_static.inc"
+.include "bpe_final_default.inc"
 .segment "_ptext_psabre__driver"
 .include "sabre.inc"
 

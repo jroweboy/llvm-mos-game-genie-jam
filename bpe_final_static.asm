@@ -1,7 +1,7 @@
 sabre_maxTracks:
 	.byte 1
 sabre_maxSFX:
-	.byte 0
+	.byte 1
 
 trackHeaderTable_lo:
 	.byte <_default_New_song_header
@@ -11,10 +11,14 @@ trackTable_PRGbank:
 	.byte $00
 
 sfxHeaderTable_lo:
+	.byte <_sfx_error_header
 sfxHeaderTable_hi:
+	.byte >_sfx_error_header
 
 ;;;; Track index constants
 	_default_New_song = 0
+;;;; SFX index constants
+	_sfx_error = 0
 
 env0:
 	.byte 0,ENV_LOOP,0
@@ -253,4 +257,18 @@ dpcm_noteToSampleLength:
 	.byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 	.byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
 	.byte $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
+
+_sfx_error_header:
+	.byte 1
+	.byte 150
+	.word _sfx_error_pulse1
+	.word _sfx_error_pulse2
+	.word NULL_triangle
+	.word NULL_noise
+_sfx_error_pulse1:
+	.byte NL4,INST|CONT|10,DS2,NL1,INST|SLNT,NL6,INST|10,NL1,INST|SLNT,NLC
+	.byte 50,None,END_SFX
+_sfx_error_pulse2:
+	.byte NL4,INST|CONT|10,CS2,NL1,INST|SLNT,NL6,INST|10,NL1,INST|SLNT,NLC
+	.byte 50,None,END_SFX
 

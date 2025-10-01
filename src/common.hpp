@@ -15,6 +15,8 @@ extern "C" {
 
 #define FIXED __attribute__((section(".prg_rom_fixed")))
 
+constexpr uint8_t sfx_error = 0;
+
 enum class Nametable : uint8_t {
     A = 0x00,
     B = 0x04,
