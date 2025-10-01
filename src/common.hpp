@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-// #define TEST_LEVEL_SOLUTION 1
+#define TEST_LEVEL_SOLUTION 1
 
 #define NT_UPD_REPT 0x80
 

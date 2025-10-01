@@ -265,6 +265,7 @@ void load_level(uint8_t level_num) {
         LevelObjType objtype = static_cast<LevelObjType>(cmd & 0x0f);
         switch (objtype) {
         case LevelObjType::TERMINATOR:
+            current_sub = 0;
             return;
         case LevelObjType::TIMED_WALL:
         case LevelObjType::SOLID_WALL:
@@ -272,9 +273,21 @@ void load_level(uint8_t level_num) {
             create_wall(current_level, objtype);
             break;
         case LevelObjType::PICKUP: {
-            uint8_t xy = current_level[level_offset++];
-            draw_pickup((Point)xy);
-            pickup_list[pickup_count++] = xy;
+            Point xy = (Point)current_level[level_offset++];
+            uint8_t lendir = 1;
+            if (cmd & L_MULTIPLE) {
+                lendir = current_level[level_offset++];
+            }
+            auto len = (uint8_t)(lendir & ~(L_VERTICAL));
+            while (len--) {
+                draw_pickup(xy);
+                pickup_list[pickup_count++] = xy.raw;
+                if (lendir & L_VERTICAL) {
+                    xy.y++;
+                } else {
+                    xy.x++;
+                }
+            }
             break;
         }
         case LevelObjType::ENEMY: {

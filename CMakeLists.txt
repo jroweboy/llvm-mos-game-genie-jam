@@ -39,6 +39,7 @@ target_compile_options(${CMAKE_PROJECT_NAME} PRIVATE
     -Wno-c99-extensions # and array designators!
     -Wno-vla-cxx-extension
     -Wno-mismatched-tags
+    -fno-unroll-loops
 )
 
 target_link_options(${CMAKE_PROJECT_NAME} PRIVATE
@@ -51,6 +52,7 @@ target_link_options(${CMAKE_PROJECT_NAME} PRIVATE
 
     # make functions non-recursive by default
     -fnonreentrant
+    -fno-unroll-loops
     # -Map generates a file with information about how the final binary's memory
     # is laid out. This will eventually be used to show the remaining space in
     # CHR-ROM, PRG-ROM, PRG-RAM, System RAM, and ZEROPAGE
